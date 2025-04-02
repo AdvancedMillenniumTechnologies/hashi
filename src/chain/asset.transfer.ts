@@ -11,7 +11,8 @@ export class AssetTransfer {
     xaid: number
 	gen: string
 	gh: Uint8Array
-
+	aclose: Uint8Array
+	grp: Uint8Array
 
 	// encode the transaction
 	// return the encoded transaction
@@ -24,8 +25,7 @@ export class AssetTransfer {
 export interface IAssetTransferTxBuilder {
 	addSender(sender: string): IAssetTransferTxBuilder
 	addFee(fee: number): IAssetTransferTxBuilder
-
-
+	addClose(close: string): IAssetTransferTxBuilder
 	get(): AssetTransfer
 }
 
@@ -69,6 +69,11 @@ export class AssetTransferTxBuilder implements IAssetTransferTxBuilder {
         this.tx.arcv = new AlgorandEncoder().decodeAddress(receiver)
         return this
     }
+
+	addClose(close: string): IAssetTransferTxBuilder {
+		this.tx.aclose = new AlgorandEncoder().decodeAddress(close)
+		return this
+	}
 
 	get(): AssetTransfer {
 		return this.tx

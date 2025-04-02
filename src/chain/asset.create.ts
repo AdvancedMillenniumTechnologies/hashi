@@ -22,6 +22,7 @@ export class AssetCreate {
 		r?: Uint8Array
 		un?: string
 	}
+	grp: Uint8Array
 
 	// encode the transaction
 	// return the encoded transaction
