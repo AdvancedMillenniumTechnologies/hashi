@@ -2,9 +2,9 @@ import { ConfigService } from "@nestjs/config"
 import { Crafter } from "./crafter.role"
 import { AlgorandTransactionCrafter } from '@algorandfoundation/algo-models'
 import { AssetCreateTxBuilder, IAssetCreateTxBuilder } from "./asset.create"
-
 import { AssetTransfer, AssetTransferTxBuilder, IAssetTransferTxBuilder } from "./asset.transfer"
 import { ApplicationTxBuilder } from "./application.transaction"
+import { GroupTransactionBuilder, IGroupTransactionBuilder } from "./group.transaction"
 
 
 export class AlgoTxCrafter extends AlgorandTransactionCrafter {
@@ -37,28 +37,110 @@ export class AlgoTxCrafter extends AlgorandTransactionCrafter {
 		return assetBuilder;	
 	}
 
-	createApplication(from: string, approvalProgram: Uint8Array, clearProgram: Uint8Array, globalSchema: { numByteSlice: number, numUint: number }, localSchema: { numByteSlice: number, numUint: number }, firstRound:bigint, lastRound:bigint): any {
-		return new ApplicationTxBuilder(this.genesisIdCrafter, this.genesisHashCrafter)
+	applicationCall(from: string, 
+		approvalProgram: Uint8Array, 
+		clearProgram: Uint8Array,
+		appArgs: Array<Uint8Array>,
+		globalSchema: { numByteSlice: number, numUint: number }, 
+		localSchema: { numByteSlice: number, numUint: number }, 
+		firstRound:bigint, 
+		lastRound:bigint,
+		foreignApps: Array<number>,
+		foreignAssets: Array<number>,
+		appIndex: bigint,
+		accounts?: Array<string>): any {			
+		const applicationBuilder = new ApplicationTxBuilder(this.genesisIdCrafter, this.genesisHashCrafter)
 		.addSender(from)
-		// .addFee(BigInt(1000))
-		.addApprovalProgram(approvalProgram)
-		.addClearProgram(clearProgram)
-		.addGlobalSchema(globalSchema.numByteSlice, globalSchema.numUint)
-		.addLocalSchema(localSchema.numByteSlice, localSchema.numUint)
+		.addFee(BigInt(1000))
 		.addFirstValidRound(firstRound)
 		.addLastValidRound(lastRound)
-		// .addApplicationId(BigInt(0))
-		.addOnCompleteOption(0)
-        // .addApplicationArgs([])  // Empty array as default
-        // .addAccounts([])         // Empty array as default
-        // .addForeignAssets([])    // Empty array as default
-        // .addForeignApps([])      // Empty array as default
-        // .addBoxes([])            // Empty array as default
-		// .addExtraProgram(0)
-		// // .addLease(new Uint8Array())
-		// .addRekey(new Uint8Array())
-		// .addGroup(new Uint8Array())
-		// .addNote(new Uint8Array([]))
+
+		// Check if approvalProgram is defined and not empty
+		if(approvalProgram && approvalProgram.byteLength > 0) {
+			applicationBuilder.addApprovalProgram(approvalProgram)
+		}
+		
+		// Check if clearProgram is defined and not empty
+		if(clearProgram && clearProgram.byteLength > 0) {
+			applicationBuilder.addClearProgram(clearProgram)
+		}
+		
+		// Check if appArgs array exists and is not empty
+		if(appArgs && Array.isArray(appArgs) && appArgs.length > 0) {
+			applicationBuilder.addApplicationArgs(appArgs)
+		}
+
+		// Check and add global schema if provided and valid
+		if(globalSchema && typeof globalSchema === 'object') {
+		if(globalSchema.numByteSlice > 0) {
+			applicationBuilder.addGlobalSchemaByteSlice(globalSchema.numByteSlice)
+		}
+
+		if(globalSchema.numUint > 0) {
+			applicationBuilder.addGlobalSchemaUint(globalSchema.numUint)
+		}
+		}
+
+		// Check and add local schema if provided and valid
+		if(localSchema && typeof localSchema === 'object') {
+		if(localSchema.numByteSlice > 0) {
+			applicationBuilder.addLocalSchemaByteSlice(localSchema.numByteSlice)
+		}
+
+		if(localSchema.numUint > 0) {
+			applicationBuilder.addLocalSchemaUint(localSchema.numUint)
+		}
+		}
+
+		// Check and add foreign apps if provided and valid
+		if(foreignApps && Array.isArray(foreignApps) && foreignApps.length > 0) {
+			applicationBuilder.addForeignApps(foreignApps)
+		}
+
+		// Check and add foreign assets if provided and valid
+		if(foreignAssets && Array.isArray(foreignAssets) && foreignAssets.length > 0) {
+			applicationBuilder.addForeignAssets(foreignAssets)
+		}	
+
+		// Check and add accounts if provided and valid
+		if(accounts && Array.isArray(accounts) && accounts.length > 0) {
+			applicationBuilder.addAccounts(accounts)
+		}
+
+		// Check and add application ID if provided
+		if(appIndex && appIndex > 0n) {
+			applicationBuilder.addApplicationId(appIndex)
+		}	
+
+		return applicationBuilder;
+	}
+
+	groupTransaction(from: string, firstRound: bigint, lastRound: bigint, transactions: Array<any>): any {
+		// Calculate a higher fee for application calls
+		let totalFee = BigInt(0);
+		for (const tx of transactions) {
+			// Application calls need higher fees
+			if (tx.type === 'application') {
+				totalFee += BigInt(2000); // Higher fee for application calls
+			} else {
+				totalFee += BigInt(1000); // Standard fee for other transaction types
+			}
+		}
+		
+		// Ensure minimum fee
+		if (totalFee < BigInt(2000)) {
+			totalFee = BigInt(2000);
+		}
+		
+		console.log(`Setting group transaction fee to ${totalFee} microAlgos`);
+		
+		const groupBuilder = new GroupTransactionBuilder(this.genesisIdCrafter, this.genesisHashCrafter)
+		.addSender(from)
+		// .addFee(totalFee)
+		.addFirstValidRound(firstRound)
+		.addLastValidRound(lastRound)
+		.addTransactions(transactions)
+		return groupBuilder;
 	}
 }
 

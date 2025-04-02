@@ -13,12 +13,12 @@ export class ApplicationCall {
     apap?: Uint8Array // Approval program
     apsu?: Uint8Array // Clear state program
     apgs?: { 
-        nbs: number 
-        nui: number 
+        nbs?: number 
+        nui?: number 
         }; // Global schema
     apls?: { 
-        nbs: number
-        nui: number 
+        nbs?: number
+        nui?: number 
     }; // Local schema
     apid?: bigint // Application id
     apaa?: Uint8Array[] // Application arguments
@@ -38,15 +38,8 @@ export class ApplicationCall {
     
     // encode the transaction
     encode(): Uint8Array {
-        const encoded: Uint8Array = msgpack.encode(this, { sortKeys: true, ignoreUndefined: true })
-
-		// tag
-		const TAG: Buffer = Buffer.from("TX")
-
-		// concat tag + encoded
-		const encodedTx: Uint8Array = Encoder.ConcatArrays(TAG, encoded)
-
-		return encodedTx
+        const encoded: Uint8Array = new AlgorandEncoder().encodeTransaction(this)
+		return encoded
     }
 }
 
@@ -58,7 +51,11 @@ export interface IApplicationNoOpTxBuilder {
     addApprovalProgram(apap: Uint8Array): IApplicationNoOpTxBuilder;
     addClearProgram(apsu: Uint8Array): IApplicationNoOpTxBuilder;
     addGlobalSchema(nbs: number, nui: number): IApplicationNoOpTxBuilder;
+    addGlobalSchemaByteSlice(nbs: number): IApplicationNoOpTxBuilder;
+    addGlobalSchemaUint(nui: number): IApplicationNoOpTxBuilder;
     addLocalSchema(nbs: number, nui: number): IApplicationNoOpTxBuilder;
+    addLocalSchemaByteSlice(nbs: number): IApplicationNoOpTxBuilder;
+    addLocalSchemaUint(nui: number): IApplicationNoOpTxBuilder;
     addApplicationId(appId: bigint): IApplicationNoOpTxBuilder;
     addApplicationArgs(args: Uint8Array[]): IApplicationNoOpTxBuilder;
     addAccounts(accounts: string[]): IApplicationNoOpTxBuilder;
@@ -117,14 +114,62 @@ export class ApplicationTxBuilder implements IApplicationNoOpTxBuilder {
     }
 
     addGlobalSchema(nbs: number, nui: number): IApplicationNoOpTxBuilder {
-        this.tx.apgs = { nbs: 0, nui:0 };
+        this.tx.apgs = { nbs, nui };
+        return this;
+    }
+
+    addGlobalSchemaByteSlice(nbs: number): IApplicationNoOpTxBuilder {
+        // Initialize apgs if it doesn't exist
+        if (!this.tx.apgs) {
+            this.tx.apgs = {};
+        }
+        // Only set if value is not 0
+        if (nbs !== 0) {
+            this.tx.apgs.nbs = nbs;
+        }
+        return this;
+    }
+
+    addGlobalSchemaUint(nui: number): IApplicationNoOpTxBuilder {
+        // Initialize apgs if it doesn't exist
+        if (!this.tx.apgs) {
+            this.tx.apgs = {};
+        }
+        // Only set if value is not 0
+        if (nui !== 0) {
+            this.tx.apgs.nui = nui;
+        }
         return this;
     }
 
     addLocalSchema(nbs: number, nui: number): IApplicationNoOpTxBuilder {
-        this.tx.apls = { nbs: 0, nui: 0 };
+        this.tx.apls = { nbs, nui };
         return this;
     }
+
+    addLocalSchemaByteSlice(nbs: number): IApplicationNoOpTxBuilder {
+        // Initialize apls if it doesn't exist
+        if (!this.tx.apls) {
+            this.tx.apls = {};
+        }
+        // Only set if value is not 0
+        if (nbs !== 0) {
+            this.tx.apls.nbs = nbs;
+        }
+        return this;
+    }
+
+    addLocalSchemaUint(nui: number): IApplicationNoOpTxBuilder {
+        // Initialize apls if it doesn't exist
+        if (!this.tx.apls) {
+            this.tx.apls = {};
+        }
+        // Only set if value is not 0
+        if (nui !== 0) {
+            this.tx.apls.nui = nui;
+        }
+        return this;
+    }   
 
     addApplicationId(appId: bigint): IApplicationNoOpTxBuilder {
         this.tx.apid = appId;
@@ -142,12 +187,12 @@ export class ApplicationTxBuilder implements IApplicationNoOpTxBuilder {
     }
 
     addForeignAssets(assets: number[]): IApplicationNoOpTxBuilder {
-        this.tx.apfa = assets;
+        this.tx.apas = assets;
         return this;
     }
 
     addForeignApps(apps: number[]): IApplicationNoOpTxBuilder {
-        this.tx.apas = apps;
+        this.tx.apfa = apps;
         return this;
     }
 
