@@ -528,6 +528,7 @@ export class Transaction {
         //     body.foreignAssets??[],
         //     body.accounts??[]
        //      body.fee
+
         // )
 
 
