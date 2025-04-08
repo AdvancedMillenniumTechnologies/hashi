@@ -80,7 +80,7 @@ export class ApplicationTxBuilder implements IApplicationNoOpTxBuilder {
         this.tx.gh = new Uint8Array(Buffer.from(genesisHash, "base64"));
         this.tx.gen = genesisId;
         this.tx.type = "appl";
-        this.tx.grp = new Uint8Array();
+        // this.tx.grp = new Uint8Array();
         // this.tx.fee = BigInt(1000);
     }
 

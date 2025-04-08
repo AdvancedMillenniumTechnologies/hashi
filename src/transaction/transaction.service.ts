@@ -344,11 +344,11 @@ export class TransactionService implements OnModuleInit {
 
     async signAndSubmitTransaction(encoded: Uint8Array, from: string): Promise<string> {
         const sig = await this.sign(encoded, from);
-
+        console.log('sig--', sig)
         const ready = await this.txnCrafter.addSignature(encoded, sig)
-
+        console.log('ready--', ready)
         const txtId = await this.walletService.submitTransaction(ready)
-
+        console.log('txtId--', txtId)
         return txtId;
     }
 
@@ -436,12 +436,15 @@ export class TransactionService implements OnModuleInit {
                     accounts,
                     fee
                 }
+                console.log('params---',params)
                 const encoded = (await this.applicationCallTxn(params)).get().encode();
-
+                console.log('encoded---',encoded)
+                const txnId2 = await this.sign(encoded, from)
+                console.log('txnId2---',txnId2)
                 const txnId = await this.signAndSubmitTransaction(encoded, from);
-
-                const transaction = await this.waitForTransaction(txnId, 10, 2000, this.algorand("testnet"))     
-
+                console.log('txnId---',txnId)
+                const transaction = await this.waitForTransaction(txnId, 10, 2000, this.algorand("testnet"))
+                console.log('transaction---',transaction)
                 return { txnId, applicationId: transaction.transaction.createdApplicationIndex ?? appIndex, error: null };
             } catch (error) {
                 console.error('Error in applicationCall:', error);  

@@ -8,7 +8,7 @@ import { ConfigService } from "@nestjs/config"
 import { CrafterFactory } from "../chain/crafter.factory"
 import { ApiTags } from "@nestjs/swagger"
 import { TransactionService } from "./transaction.service"
-import algosdk from "algosdk";
+import algosdk, {getApplicationAddress} from "algosdk";
 import {sha512_256} from "js-sha512";
 import { AlgorandEncoder, AlgorandTransactionCrafter, AssetParamsBuilder } from '@algorandfoundation/algo-models'
 import { concatArrays } from "../utils/utils"
@@ -453,9 +453,8 @@ export class Transaction {
             { numByteSlice: 0, numUint: 2 },
             { numByteSlice: 0, numUint: 0 },
             [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(assetId), algosdk.encodeUint64(1) ],
-            [],
-            [],
-            []
+            [], [], [],
+            1000
             );
 
 
@@ -463,11 +462,11 @@ export class Transaction {
 
       // return await this.txnService.applicationCall('test', 0,
       //     'CiADAAEEJgEIYXNzZXRfaWSABG6nG1OABBV0U1qABCIZu6eABPFXdyaABDOzSZ42GgCOBQABABYALAA4AEQAMRkURDEYFEQ2GgEXNhoCF4gAPiNDMRkURDEYRDEWIwlJOBAjEkSIAD0jQzEZFEQxGESIAGQjQzEZFEQxGESIAH0jQzEZgQUSRDEYRIgAiCNDigIAKIv+Z4AIcXVhbnRpdHmL/2eJigEAMQAyCRJEMgoiKGVEcABFARREi/84BzIKEkSxIihlRDIKIrISshSyESSyECKyAbOJigAAMQAiKGVEcABFARREsSIoZUQxACKyErIUshEkshAisgGziYoAALEiKGVEMQAjshKyFLIRJLIQIrIBs4mKAAAxADIJEkSxIihlRDIJSbIVIrISshSyESSyECKyAbOxMglJsgkisgiyByOyECKyAbOJ',
-        //   'CoEBQw==',
-        //   { numByteSlice: 0, numUint: 2 }, { numByteSlice: 0, numUint: 0 },
-         //  [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(735261053), algosdk.encodeUint64(1) ],
-         //  [], [],[],
-         //  1000
+      //     'CoEBQw==',
+      //     { numByteSlice: 0, numUint: 2 }, { numByteSlice: 0, numUint: 0 },
+      //     [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(735261053), algosdk.encodeUint64(1) ],
+      //     [], [],[],
+      //     1000
       // );
 
 
@@ -552,9 +551,6 @@ export class Transaction {
         const uint64Type = new algosdk.ABIUintType(64);
         const uint64ArrayType = new algosdk.ABIArrayDynamicType(uint64Type);
 
-        // [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(assetId), algosdk.encodeUint64(1) ],
-
-
         return await this.txnService.applicationCall(
             'test',
             0,
@@ -562,16 +558,150 @@ export class Transaction {
             body.clearProgram,
             { numUint: 2, numByteSlice: 2 },
             { numByteSlice: 0, numUint: 0 },
-            //      [new Uint8Array(sha512_256.array(Buffer.from(     "create_application(uint64,uint64)void")).slice(0, 4)),
             [new Uint8Array(sha512_256.array(Buffer.from("create_application(string,uint64,uint64[])void")).slice(0, 4)),
                 new TextEncoder().encode(name),
                 algosdk.encodeUint64(counter),
                 uint64ArrayType.encode(token)],
             [],
             [],
-            []
+            [],
+            1000
         );
     }
 
+
+    @Post("transfer-token/group-txn")
+    async createYojanaToken(@Body() body: {
+        from: string,
+        receiverAddress: string,
+        assetName: string,
+        unitName: string,
+        application_id:number
+    }): Promise<{ txnId: string, error: string }> {
+
+        // application call + asset transfer
+
+        const transactions = [
+            {
+                type: 'application' as const,
+                // params: {
+                //     appIndex: 736444345,
+                //     appArgs: [new Uint8Array(sha512_256.array(Buffer.from("opt_in_to_asset(pay)void")).slice(0, 4))],
+                //     foreignAssets: [735261053],
+                //     fee: 2000
+                // }
+                params: {
+                    appIndex: body.application_id,
+                    appArgs: [
+                        new Uint8Array(
+                            sha512_256
+                                .array(Buffer.from("create_yojana_token(account,string,string,string,byte[],pay)void"))
+                                .slice(0, 4)
+                        ),
+                    ],
+                    foreignAssets: [],
+                    fee: 2000
+                }
+            },
+            {
+                type: 'asset-create' as const,
+                params: {
+                    sender: body.from,
+                    total: 1,
+                    decimals: 0,
+                    defaultFrozen: false,
+                    unitName: body.unitName,
+                    assetName: body.assetName,
+                    manager: body.from,
+                    reserve: body.from,
+                    freeze: body.from,
+                    clawback: body.from
+                }
+            },
+        ];
+
+        return await this.txnService.groupTransactionWithAlgosdk(
+            'test',
+            transactions
+        );
+
+    }
+
+
+
+    @Post("create-token/NFT/token")
+    async createYojanaNFTToken(@Body() body: {
+        from: string,
+        receipient_key: string,
+        receiverAddress: string,
+        assetName: string,
+        unitName: string,
+        application_id:number,
+        approvalProgram?:string,
+        clearProgram?: string,
+        reserveAddress?: string,
+        urlTemplate?: string,
+        metadataBytes?: any,
+        mbrPay?: any
+    }): Promise<{ txnId: string, error: string }> {
+
+        const uint64Type = new algosdk.ABIUintType(64);
+        const uint64ArrayType = new algosdk.ABIArrayDynamicType(uint64Type);
+
+        console.log('inside--', body)
+
+        const suggestedParams = await this.txnService.getSuggestedParams();
+        const receiver = algosdk.getApplicationAddress(body.application_id)
+
+        const sender = body.receipient_key
+
+        const mbrPay = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            sender: sender,
+            receiver: algosdk.getApplicationAddress(body.application_id),
+            amount: 500000,
+            suggestedParams,
+        });
+        // const mbrPayBytes = Buffer.from(mbrPay, 'base64');
+        console.log('unsignedTxn--', mbrPay)
+        const mbrPayBytes = mbrPay.toByte();
+
+        // const publicKey = algosdk.decodeAddress(body.reserveAddress).publicKey;
+        // console.log("Public key:", publicKey);
+        // console.log("Length:", publicKey.length);
+        // console.log("Hex:", Buffer.from(publicKey).toString('hex'));
+
+        try {
+
+            return await this.txnService.applicationCall(
+                body.from,
+                Number(body.application_id),
+                body.approvalProgram,
+                body.clearProgram,
+                { numUint: 2, numByteSlice: 2 },
+                { numByteSlice: 0, numUint: 0 },
+                [
+                    new Uint8Array(
+                        sha512_256
+                            .array(Buffer.from("create_yojana_token(account,string,string,string,byte[],pay)void"))
+                            .slice(0, 4)
+                    ),
+                    algosdk.decodeAddress(body.reserveAddress).publicKey,
+                    new TextEncoder().encode(body.urlTemplate),
+                    new TextEncoder().encode(body.assetName),
+                    new TextEncoder().encode(body.unitName.replace(" ", "").toUpperCase().slice(0, 7)),
+                    body.metadataBytes,
+                    mbrPayBytes
+                ],
+                [],
+                [],
+                [],
+                1000
+            );
+
+        } catch (e) {
+            console.log('eeee', e)
+        }
+
+    }
 
 }
