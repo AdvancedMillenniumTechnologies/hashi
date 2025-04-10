@@ -928,19 +928,9 @@ export class Transaction {
   ) {
     const transactions = [
       {
-        type: "application" as const,
+        type: "opt-in" as const,
         params: {
-          appIndex: body.appIndex,
-          appArgs: [
-            new Uint8Array(
-              sha512_256
-                .array(Buffer.from("opt_in_to_asset(pay)void"))
-                .slice(0, 4)
-            ),
-          ],
-          // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
-          foreignAssets: [body.assetId],
-          fee: 2000,
+          assetIndex: body.assetId, //body.amount
         },
       },
       {
