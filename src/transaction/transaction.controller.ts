@@ -928,13 +928,6 @@ export class Transaction {
   ) {
     const transactions = [
       {
-        type: "payment" as const,
-        params: {
-          to: "TF37ZZIL3JQPPKPZIQW2EIJZYSIQODCW5GAYH3SCTVPTYHOUFHOPTQJHWQ", //body.receiverAddress,
-          amount: 202000, //body.amount
-        },
-      },
-      {
         type: "application" as const,
         params: {
           appIndex: body.appIndex,
