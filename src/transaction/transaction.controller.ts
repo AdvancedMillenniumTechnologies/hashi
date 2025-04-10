@@ -13,6 +13,7 @@ import {sha512_256} from "js-sha512";
 import { AlgorandEncoder, AlgorandTransactionCrafter, AssetParamsBuilder } from '@algorandfoundation/algo-models'
 import { concatArrays } from "../utils/utils"
 import { log } from "console";
+import {Uint64Schema} from "algosdk/dist/types/encoding/schema";
 
 
 // DTO for required parameters
@@ -419,31 +420,17 @@ export class Transaction {
         return { txnId: '', error: '' };
     }
 
-    //736766885
    @Post('application-call')
    async applicationCall(@Body() body: {
-    // from: string,
-    // approvalProgram?: string,
-    // clearProgram?: string,
-    // globalSchema?: { numByteSlice: number, numUint: number },
-    // localSchema?: { numByteSlice: number, numUint: number } ,
     appIndex?: number,
     approvalProgram?: string,
     clearProgram?: string,
-    // appArgs?: Array<Uint8Array>,
-    // foreignApps?: Array<number>,
-    // foreignAssets?: Array<number>,
-    // accounts?: Array<string>
-    // fee?: number
     }
     ): Promise<{ txnId: string, error: string }> {
 
        console.log('body inside hashiii--', body.appIndex)
 
-        // Participation Token Application Call
-
        const assetId = Number(body.appIndex)
-
 
         return await this.txnService.applicationCall(
             'test',
@@ -457,101 +444,25 @@ export class Transaction {
             1000
             );
 
-
-      // meets change
-
-      // return await this.txnService.applicationCall('test', 0,
-      //     'CiADAAEEJgEIYXNzZXRfaWSABG6nG1OABBV0U1qABCIZu6eABPFXdyaABDOzSZ42GgCOBQABABYALAA4AEQAMRkURDEYFEQ2GgEXNhoCF4gAPiNDMRkURDEYRDEWIwlJOBAjEkSIAD0jQzEZFEQxGESIAGQjQzEZFEQxGESIAH0jQzEZgQUSRDEYRIgAiCNDigIAKIv+Z4AIcXVhbnRpdHmL/2eJigEAMQAyCRJEMgoiKGVEcABFARREi/84BzIKEkSxIihlRDIKIrISshSyESSyECKyAbOJigAAMQAiKGVEcABFARREsSIoZUQxACKyErIUshEkshAisgGziYoAALEiKGVEMQAjshKyFLIRJLIQIrIBs4mKAAAxADIJEkSxIihlRDIJSbIVIrISshSyESSyECKyAbOxMglJsgkisgiyByOyECKyAbOJ',
-      //     'CoEBQw==',
-      //     { numByteSlice: 0, numUint: 2 }, { numByteSlice: 0, numUint: 0 },
-      //     [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(735261053), algosdk.encodeUint64(1) ],
-      //     [], [],[],
-      //     1000
-      // );
-
-
-
-       // return await this.txnService.applicationCall(
-       //     'test',
-       //     735261053,
-       //     body.approvalProgram,
-       //     body.clearProgram,
-       //     { numByteSlice: 0, numUint: 2 },
-       //     { numByteSlice: 0, numUint: 0 },
-       //     [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(735261053), algosdk.encodeUint64(1) ],
-       //     [], []
-       // );
-
-
-
-
-
-        // var {txnId, error} = await this.txnService.makePayment('test', '5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI', 202000)
-
-
-        // return await this.txnService.applicationCall('test', 736444345,
-        //     null,
-        //     null, 
-        //     null, null,
-        //     [new Uint8Array(sha512_256.array(Buffer.from("opt_in_to_asset(pay)void")).slice(0, 4)), Buffer.from("EJVPKD4RQELEMZ7D4W756LORLPBH6OBN773URZXAS22WPRLZW6OQ")], 
-        //     [], [735261053],
-        //     ['SEHSPKLFLP55PHXKKZPXAZ5DFE7DDBH3BHPVTRRKIEYCBJOJWTE4V42HLI']
-        //     );
-
-        // For all other application calls, use the standard method
-
-       // return await this.txnService.applicationCall(
-       //     body.from,
-       //     body.appIndex,
-       //     body.approvalProgram,
-       //     body.clearProgram,
-       //     body.globalSchema,
-       //     body.localSchema,
-       //     [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(0), algosdk.encodeUint64(1) ],
-       //     body.foreignApps,
-       //     body.foreignAssets,
-       //     // body.accounts??[]
-       // )
-
-
-
-        // return await this.txnService.applicationCall(
-        //     body.from,
-        //     body.appIndex??0,
-        //     body.approvalProgram??'',
-        //     body.clearProgram??'',
-        //     body.globalSchema??{ numByteSlice: 0, numUint: 0 },
-        //     body.localSchema??{ numByteSlice: 0, numUint: 0 },
-        //     body.appArgs??[],
-        //     body.foreignApps??[],
-        //     body.foreignAssets??[],
-        //     body.accounts??[]
-       //      body.fee
-
-        // )
-
-
     }
 
 
     @Post('deploy-yojana')
     async yojanaApplicationCall(@Body() body: {
         name?: string,
-        counter?: any,
         token?: any,
         approvalProgram?:string,
         clearProgram?: string
-    }): Promise<{ txnId: string, error: string }> {
+    }): Promise<{ application_id: number }> {
 
         console.log('body inside hashiii--1', body.name)
         const name = body.name;
-        const counter = body.counter;
         const token = body.token;
 
         const uint64Type = new algosdk.ABIUintType(64);
         const uint64ArrayType = new algosdk.ABIArrayDynamicType(uint64Type);
 
-        return await this.txnService.applicationCall(
+        const response =  await this.txnService.applicationCall(
             'test',
             0,
             body.approvalProgram,
@@ -560,70 +471,21 @@ export class Transaction {
             { numByteSlice: 0, numUint: 0 },
             [new Uint8Array(sha512_256.array(Buffer.from("create_application(string,uint64,uint64[])void")).slice(0, 4)),
                 new TextEncoder().encode(name),
-                algosdk.encodeUint64(counter),
+                algosdk.encodeUint64(0),
                 uint64ArrayType.encode(token)],
             [],
             [],
             [],
             1000
         );
-    }
 
+        // send 0.001 Algos
 
-    @Post("transfer-token/group-txn")
-    async createYojanaToken(@Body() body: {
-        from: string,
-        receiverAddress: string,
-        assetName: string,
-        unitName: string,
-        application_id:number
-    }): Promise<{ txnId: string, error: string }> {
+        console.log('response---in hashi deploy yojana--', response)
 
-        // application call + asset transfer
-
-        const transactions = [
-            {
-                type: 'application' as const,
-                // params: {
-                //     appIndex: 736444345,
-                //     appArgs: [new Uint8Array(sha512_256.array(Buffer.from("opt_in_to_asset(pay)void")).slice(0, 4))],
-                //     foreignAssets: [735261053],
-                //     fee: 2000
-                // }
-                params: {
-                    appIndex: body.application_id,
-                    appArgs: [
-                        new Uint8Array(
-                            sha512_256
-                                .array(Buffer.from("create_yojana_token(account,string,string,string,byte[],pay)void"))
-                                .slice(0, 4)
-                        ),
-                    ],
-                    foreignAssets: [],
-                    fee: 2000
-                }
-            },
-            {
-                type: 'asset-create' as const,
-                params: {
-                    sender: body.from,
-                    total: 1,
-                    decimals: 0,
-                    defaultFrozen: false,
-                    unitName: body.unitName,
-                    assetName: body.assetName,
-                    manager: body.from,
-                    reserve: body.from,
-                    freeze: body.from,
-                    clawback: body.from
-                }
-            },
-        ];
-
-        return await this.txnService.groupTransactionWithAlgosdk(
-            'test',
-            transactions
-        );
+        return {
+            application_id: Number(response.applicationId)
+        }
 
     }
 
@@ -633,75 +495,129 @@ export class Transaction {
     async createYojanaNFTToken(@Body() body: {
         from: string,
         receipient_key: string,
-        receiverAddress: string,
+        application_address: string,
+        application_id:number,
         assetName: string,
         unitName: string,
-        application_id:number,
         approvalProgram?:string,
         clearProgram?: string,
         reserveAddress?: string,
         urlTemplate?: string,
         metadataBytes?: any,
-        mbrPay?: any
+        metadataHash?: any,
+        tokens?: any
     }): Promise<{ txnId: string, error: string }> {
 
-        const uint64Type = new algosdk.ABIUintType(64);
-        const uint64ArrayType = new algosdk.ABIArrayDynamicType(uint64Type);
-
         console.log('inside--', body)
+        const metadataHash = body.metadataHash;
+        const metadataBytes = new TextEncoder().encode(metadataHash);
 
-        const suggestedParams = await this.txnService.getSuggestedParams();
-        const receiver = algosdk.getApplicationAddress(body.application_id)
+        console.log('metadataBytes;metadataBytes',metadataBytes)
 
-        const sender = body.receipient_key
-
-        const mbrPay = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            sender: sender,
-            receiver: algosdk.getApplicationAddress(body.application_id),
-            amount: 500000,
-            suggestedParams,
-        });
-        // const mbrPayBytes = Buffer.from(mbrPay, 'base64');
-        console.log('unsignedTxn--', mbrPay)
-        const mbrPayBytes = mbrPay.toByte();
-
-        // const publicKey = algosdk.decodeAddress(body.reserveAddress).publicKey;
-        // console.log("Public key:", publicKey);
-        // console.log("Length:", publicKey.length);
-        // console.log("Hex:", Buffer.from(publicKey).toString('hex'));
 
         try {
 
-            return await this.txnService.applicationCall(
-                body.from,
-                Number(body.application_id),
-                body.approvalProgram,
-                body.clearProgram,
-                { numUint: 2, numByteSlice: 2 },
-                { numByteSlice: 0, numUint: 0 },
-                [
-                    new Uint8Array(
-                        sha512_256
-                            .array(Buffer.from("create_yojana_token(account,string,string,string,byte[],pay)void"))
-                            .slice(0, 4)
-                    ),
-                    algosdk.decodeAddress(body.reserveAddress).publicKey,
-                    new TextEncoder().encode(body.urlTemplate),
-                    new TextEncoder().encode(body.assetName),
-                    new TextEncoder().encode(body.unitName.replace(" ", "").toUpperCase().slice(0, 7)),
-                    body.metadataBytes,
-                    mbrPayBytes
-                ],
-                [],
-                [],
-                [],
-                1000
+            const transactionsOne = [
+                {
+                    type: 'payment' as const,
+                    params: {
+                        to: body.application_address,
+                        amount: 100000  // change it to 0.1
+                    }
+                },
+                {
+                    type: 'application' as const,
+                    params: {
+                        appIndex: Number(body.application_id),
+                        approvalProgram:undefined,
+                        clearProgram:undefined,
+                        globalSchema:undefined,
+                        localSchema:undefined,
+                        appArgs: [  new Uint8Array( sha512_256.array(Buffer.from("create_yojana_token(account,string,string,string,byte[],pay)void")).slice(0, 4)),
+                        Uint8Array.of(1),
+                        Buffer.from(body.urlTemplate),
+                        Buffer.from(body.assetName),
+                        Buffer.from(body.unitName.replace(" ", "").toUpperCase().slice(0, 7)),
+                        metadataBytes
+                        ],
+                        foreignApps: [],
+                        foreignAssets:body.tokens,
+                        accounts: [body.reserveAddress],
+                        fee:1000,
+                    }
+                }
+            ];
+
+            // console.log('transactionsOne--',transactionsOne)
+
+            const responseNFT = await this.txnService.groupTransactionWithAlgosdk(
+                body.receipient_key,
+                transactionsOne
             );
+
+            console.log('responseNFT-',responseNFT.txnId)
+
+            // return
+
+            if(responseNFT.txnId){
+                console.log('inside opt in')
+               const responseOBJ =  await this.txnService.optInAsset(737223882, body.receipient_key)
+                console.log('inside responseOBJ',responseOBJ)
+                if(responseOBJ.txnId) {
+                    console.log('inside transfer')
+                    const transactionstwo = [
+                        {
+                            type: 'payment' as const,
+                            params: {
+                                to: body.application_address,
+                                amount: 100000
+                            }
+                        },
+                        {
+                            type: 'application' as const,
+                            params: {
+                                appIndex: Number(body.application_id),
+                                approvalProgram:undefined,
+                                clearProgram:undefined,
+                                globalSchema:undefined,
+                                localSchema:undefined,
+                                appArgs: [  new Uint8Array( sha512_256.array(Buffer.from("get_yojana_token(pay,uint64)void")).slice(0, 4)),
+                                    algosdk.encodeUint64(737223882),
+                                ],
+                                foreignApps: [],
+                                foreignAssets:[737223882],
+                                accounts: [],
+                                fee:2000,
+                            }
+                        }
+                    ];
+
+                    console.log('transactionsOne--',transactionsOne)
+
+                    const responseNFT = await this.txnService.groupTransactionWithAlgosdk(
+                        body.receipient_key,
+                        transactionstwo
+                    );
+                    console.log('responseNFT---transfer--',responseNFT.txnId)
+                }
+
+            }
+
+
+            return responseNFT;
 
         } catch (e) {
             console.log('eeee', e)
         }
 
     }
+
+
+
+
+
+
+
+
 
 }

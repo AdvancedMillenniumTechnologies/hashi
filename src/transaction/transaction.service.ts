@@ -83,12 +83,12 @@ export class TransactionService implements OnModuleInit {
 
     async makePaymentTxn(from: string, to: string, amt: number, suggestedParams:any) {
         const fromAddr = await this.get_public_key({ from });
-
+        console.log('fromAddr',fromAddr, to, amt, suggestedParams)
         // const suggestedParams = await this.getSuggestedParams();
 
         // Get a crafter that uses our custom PaymentTxBuilder
         const crafter = CrafterFactory.getCrafter("algorand", this.configService);
-
+        console.log('crafter',crafter)
         // Use our custom payment method that properly handles group IDs
         return crafter.payment(fromAddr, to, amt, Number(suggestedParams.firstValid), Number(suggestedParams.lastValid));
     }
@@ -421,7 +421,7 @@ export class TransactionService implements OnModuleInit {
         appArgs?: Array<Uint8Array>, 
         foreignApps?: Array<number>, 
         foreignAssets?: Array<number>,
-        accounts?: Array<string>, fee?: number): Promise<{ txnId: string, applicationId: number, error: string }> {
+        accounts?: Array<string>, fee?: number): Promise<{ txnId: string, applicationId?: number, error: string }> {
             try {
                 const params = {
                     from,
@@ -500,6 +500,7 @@ export class TransactionService implements OnModuleInit {
                         break;
                     case 'application':
                         // Application call transaction using algosdk
+                        console.log('txConfig.params.appArgs--', txConfig.params.appArgs)
                         const appArgs = txConfig.params.appArgs ?
                             txConfig.params.appArgs.map(arg => new Uint8Array(Buffer.from(arg))) :
                             [];
@@ -508,6 +509,7 @@ export class TransactionService implements OnModuleInit {
 
                         var sp = suggestedParams;
                         sp.fee = BigInt(txConfig.params.fee)
+                        sp.flatFee = true;
 
                         txObject = algosdk.makeApplicationNoOpTxnFromObject({
                             sender: fromAddr,
@@ -516,7 +518,8 @@ export class TransactionService implements OnModuleInit {
                             accounts: accounts,
                             foreignApps: txConfig.params.foreignApps || [],
                             foreignAssets: txConfig.params.foreignAssets || [],
-                            suggestedParams: sp,})
+                            suggestedParams: sp,
+                            })
                         break;
                     case 'asset-transfer':
                         // Asset transfer transaction using algosdk
@@ -573,8 +576,11 @@ export class TransactionService implements OnModuleInit {
             }
 
             // Assign group ID using algosdk
-            const txnGroup = algosdk.assignGroupID(txObjects);
 
+            console.log('txObjects---', txObjects)
+
+            const txnGroup = algosdk.assignGroupID(txObjects);
+            console.log('txnGroup---', txnGroup)
             // Sign all transactions
             const signedTxns = [];
 
@@ -593,11 +599,14 @@ export class TransactionService implements OnModuleInit {
                     throw new Error(`Failed to sign transaction ${i+1}: ${error.message}`);
                 }
             }
-
+            console.log('signedTxns---', signedTxns)
             // Submit the signed transaction group
             try {
                 const bytestoSubmit = concatArrays(...signedTxns);
+                console.log('bytestoSubmit--bytestoSubmit', bytestoSubmit)
+
                 const txnId = await this.walletService.submitTransaction(bytestoSubmit);
+                console.log('txnId--txnId', txnId,bytestoSubmit)
                 return { txnId, error: null };
             } catch (error) {
                 console.error('Error in group transaction processing:', error);
@@ -617,30 +626,40 @@ export class TransactionService implements OnModuleInit {
         }>
     ): Promise<{ txnId: string, error: string }> {
         try {
+            console.log('inside 111')
             const publicKey: Buffer = await this.walletService.getPublicKey(from);
+            console.log('inside 2', publicKey)
             const fromAddr = EncoderFactory.getEncoder("algorand").encodeAddress(publicKey);
+            console.log('inside fromAddr', fromAddr)
             const suggestedParams = await this.getSuggestedParams();
-            
+            console.log('inside suggestedParams', suggestedParams)
             // Get the crafter      
             const crafter = CrafterFactory.getCrafter("algorand", this.configService);
-            
+            console.log('inside crafter', crafter)
             // Create individual transactions based on their type
             const txObjects = [];
-            
+
+            console.log('transactions--', transactions)
+
             for (const txConfig of transactions) {
+                console.log('txConfig', txConfig.type)
                 let txObject;
                 
                 switch (txConfig.type) {
                     case 'payment':
                         // Payment transaction
+                        console.log('inside payment')
                         const paymentParams = txConfig.params;
+                        console.log('paymentParams',paymentParams)
                         txObject = await this.makePaymentTxn(from, paymentParams.to, paymentParams.amount, suggestedParams);
+                        console.log('txObject',txObject)
                         break;
                         
                     case 'application':
                         // Application call transaction
+                        console.log('inside application')
                         const appParams = txConfig.params;
-                        
+
                         txObject = await this.applicationCallTxn({
                             from: from,
                             appIndex: appParams.appIndex || 0,
@@ -705,6 +724,8 @@ export class TransactionService implements OnModuleInit {
                 
                 txObjects.push(txObject);
             }
+
+            console.log('txObjects--', txObjects)
             
             // Group the transactions
             const groupTx = crafter.groupTransaction(
@@ -713,9 +734,10 @@ export class TransactionService implements OnModuleInit {
                 BigInt(suggestedParams.lastValid),
                 txObjects
             ).get();
-            
+            console.log('groupTx--',groupTx)
             const encodedTxns = groupTx.encodeAll();
 
+            console.log('encodedTxns--',encodedTxns)
 
             const signedTxns = [];
 
@@ -723,8 +745,11 @@ export class TransactionService implements OnModuleInit {
             for (let i = 0; i < encodedTxns.length; i++) {
                 try {
                     const signedTxn = await this.sign(encodedTxns[i], from);
+                    console.log('signedTxn---service', signedTxn)
                     const ready = await this.txnCrafter.addSignature(encodedTxns[i], signedTxn);
+                    console.log('readyservice', ready)
                     signedTxns.push(ready);
+                    console.log('signedTxnsservice', signedTxns)
                 } catch (error) {
                     console.error(`Error signing transaction ${i+1}:`, error);
                     throw new Error(`Failed to sign transaction ${i+1}: ${error.message}`);
@@ -735,9 +760,9 @@ export class TransactionService implements OnModuleInit {
           try {
 
                 const bytestoSubmit = concatArrays(...signedTxns);
-
+                console.log('bytestoSubmit',bytestoSubmit)
                 const txnId = await this.walletService.submitTransaction(bytestoSubmit);
-                
+                console.log('last txn to generate txnId',txnId)
                 return { txnId, error: null };
             } catch (error) {
                 console.error('Error in group transaction processing:', error);
