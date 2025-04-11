@@ -475,7 +475,7 @@ export class TransactionService implements OnModuleInit {
             type: 'payment' | 'application' | 'asset-transfer' | 'asset-create' | 'opt-in' | 'opt-out',
             params: any
         }>
-    ): Promise<{ txnId: string, error: string }> {
+    ): Promise<{ txnIds:  Array<string>, error: string }> {
         try {
             const publicKey: Buffer = await this.walletService.getPublicKey(from);
             const fromAddr = EncoderFactory.getEncoder("algorand").encodeAddress(publicKey);
@@ -500,7 +500,6 @@ export class TransactionService implements OnModuleInit {
                         break;
                     case 'application':
                         // Application call transaction using algosdk
-                        console.log('txConfig.params.appArgs--', txConfig.params.appArgs)
                         const appArgs = txConfig.params.appArgs ?
                             txConfig.params.appArgs.map(arg => new Uint8Array(Buffer.from(arg))) :
                             [];
@@ -509,8 +508,7 @@ export class TransactionService implements OnModuleInit {
 
                         var sp = suggestedParams;
                         sp.fee = BigInt(txConfig.params.fee)
-                        sp.flatFee = true;
-
+                        sp.flatFee = true
                         txObject = algosdk.makeApplicationNoOpTxnFromObject({
                             sender: fromAddr,
                             appIndex: txConfig.params.appIndex,
@@ -518,8 +516,7 @@ export class TransactionService implements OnModuleInit {
                             accounts: accounts,
                             foreignApps: txConfig.params.foreignApps || [],
                             foreignAssets: txConfig.params.foreignAssets || [],
-                            suggestedParams: sp,
-                            })
+                            suggestedParams: sp,})
                         break;
                     case 'asset-transfer':
                         // Asset transfer transaction using algosdk
@@ -576,11 +573,8 @@ export class TransactionService implements OnModuleInit {
             }
 
             // Assign group ID using algosdk
-
-            console.log('txObjects---', txObjects)
-
             const txnGroup = algosdk.assignGroupID(txObjects);
-            console.log('txnGroup---', txnGroup)
+
             // Sign all transactions
             const signedTxns = [];
 
@@ -599,22 +593,24 @@ export class TransactionService implements OnModuleInit {
                     throw new Error(`Failed to sign transaction ${i+1}: ${error.message}`);
                 }
             }
-            console.log('signedTxns---', signedTxns)
+
             // Submit the signed transaction group
             try {
                 const bytestoSubmit = concatArrays(...signedTxns);
-                console.log('bytestoSubmit--bytestoSubmit', bytestoSubmit)
-
                 const txnId = await this.walletService.submitTransaction(bytestoSubmit);
-                console.log('txnId--txnId', txnId,bytestoSubmit)
-                return { txnId, error: null };
+
+                var txnGroupIds = [];
+                for (let i = 0; i < txnGroup.length; i++) {
+                    txnGroupIds.push(txnGroup[i].txID());
+                }
+                return { txnIds: txnGroupIds, error: null };
             } catch (error) {
                 console.error('Error in group transaction processing:', error);
-                return { txnId: null, error: error.message || 'Unknown error in group transaction' };
+                return { txnIds: [], error: error.message || 'Unknown error in group transaction' };
             }
         } catch (error) {
             console.error('Error in groupTransactionWithAlgosdk:', error);
-            return { txnId: null, error: error.message || 'Unknown error' };
+            return { txnIds: [], error: error.message || 'Unknown error' };
         }
     }
 

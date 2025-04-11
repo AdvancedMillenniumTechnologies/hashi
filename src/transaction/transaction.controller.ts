@@ -6,7 +6,7 @@ import { EncoderFactory } from "../chain/encoder.factory"
 import { Crafter } from "../chain/crafter.role"
 import { ConfigService } from "@nestjs/config"
 import { CrafterFactory } from "../chain/crafter.factory"
-import { ApiTags } from "@nestjs/swagger"
+import {ApiBody, ApiTags} from "@nestjs/swagger"
 import { TransactionService } from "./transaction.service"
 import algosdk, {getApplicationAddress} from "algosdk";
 import {sha512_256} from "js-sha512";
@@ -145,63 +145,63 @@ export class Transaction {
             type: 'payment' | 'application' | 'asset-transfer' | 'asset-create' | 'opt-in' | 'opt-out',
             params: any
         }>
-    }): Promise<{ txnId: string, error: string }> {
+    }): Promise<{ txnIds: Array<string>, error: string }> {
         try {
             // Validate input
             if (!body.from) {
-                return { txnId: null, error: 'Sender address (from) is required' };
+                return { txnIds: [], error: 'Sender address (from) is required' };
             }
 
             if (!Array.isArray(body.transactions) || body.transactions.length === 0) {
-                return { txnId: null, error: 'At least one transaction is required' };
+                return { txnIds: [], error: 'At least one transaction is required' };
             }
 
             if (body.transactions.length > 16) {
-                return { txnId: null, error: 'Maximum 16 transactions allowed in a group' };
+                return { txnIds: [], error: 'Maximum 16 transactions allowed in a group' };
             }
 
             // Validate each transaction
             for (const txn of body.transactions) {
                 if (!txn.type) {
-                    return { txnId: null, error: 'Transaction type is required for all transactions' };
+                    return { txnIds: [], error: 'Transaction type is required for all transactions' };
                 }
 
                 if (!txn.params) {
-                    return { txnId: null, error: 'Transaction parameters are required for all transactions' };
+                    return { txnIds: [], error: 'Transaction parameters are required for all transactions' };
                 }
 
                 // Type-specific validation
                 switch (txn.type) {
                     case 'payment':
                         if (!txn.params.to) {
-                            return { txnId: null, error: 'Receiver address is required for payment transactions' };
+                            return { txnIds: [], error: 'Receiver address is required for payment transactions' };
                         }
                         if (txn.params.amount === undefined) {
-                            return { txnId: null, error: 'Amount is required for payment transactions' };
+                            return { txnIds: [], error: 'Amount is required for payment transactions' };
                         }
                         break;
                     case 'application':
                         if (!txn.params.appIndex && txn.params.appIndex !== 0) {
-                            return { txnId: null, error: 'Application ID is required for application call transactions' };
+                            return { txnIds: [], error: 'Application ID is required for application call transactions' };
                         }
                         break;
                     case 'asset-transfer':
                     case 'opt-in':
                     case 'opt-out':
                         if (!txn.params.assetIndex && txn.params.assetIndex !== 0) {
-                            return { txnId: null, error: 'Asset ID is required for asset transactions' };
+                            return { txnIds: [], error: 'Asset ID is required for asset transactions' };
                         }
                         break;
                     case 'asset-create':
                         if (!txn.params.total) {
-                            return { txnId: null, error: 'Total supply is required for asset creation' };
+                            return { txnIds: [], error: 'Total supply is required for asset creation' };
                         }
                         if (txn.params.decimals === undefined) {
-                            return { txnId: null, error: 'Decimals is required for asset creation' };
+                            return { txnIds: [], error: 'Decimals is required for asset creation' };
                         }
                         break;
                     default:
-                        return { txnId: null, error: `Unsupported transaction type: ${txn.type}` };
+                        return { txnIds: [], error: `Unsupported transaction type: ${txn.type}` };
                 }
             }
 
@@ -269,7 +269,7 @@ export class Transaction {
         receiverAddress: string,
         amount: number,
         assetId: number
-    }): Promise<{ txnId: string, error: string }> {
+    }): Promise<{ txnIds: Array<string>, error: string }> {
         // Create a group transaction with two transactions:
         // 1. A payment transaction
         // 2. An asset transfer transaction
@@ -299,14 +299,14 @@ export class Transaction {
             transactions
         );
 
-        return await this.txnService.groupTransaction(
-            body.from,
-            transactions
-        );
+        // return await this.txnService.groupTransaction(
+        //     body.from,
+        //     transactions
+        // );
     }
 
     @Post("example-group-transaction-1")
-    async exampleGroupTransaction_1(): Promise<{ txnId: string, error: string }> {
+    async exampleGroupTransaction_1(): Promise<{ txnIds: Array<string>, error: string }> {
         // Create a group transaction with two transactions:
         // 1. A payment transaction
         // 2. An asset transfer transaction
@@ -420,6 +420,9 @@ export class Transaction {
         return { txnId: '', error: '' };
     }
 
+
+   //  Criteria application deployment
+
    @Post('application-call')
    async applicationCall(@Body() body: {
     appIndex?: number,
@@ -446,6 +449,7 @@ export class Transaction {
 
     }
 
+    // yojana application deployment
 
     @Post('deploy-yojana')
     async yojanaApplicationCall(@Body() body: {
@@ -490,6 +494,7 @@ export class Transaction {
     }
 
 
+    // yojana NFT creation-optIn-transfer
 
     @Post("create-token/NFT/token")
     async createYojanaNFTToken(@Body() body: {
@@ -505,15 +510,14 @@ export class Transaction {
         urlTemplate?: string,
         metadataBytes?: any,
         metadataHash?: any,
-        tokens?: any
-    }): Promise<{ txnId: string, error: string }> {
+        tokenIds?: any
+    }): Promise<{ txnIds: Array<string>, error: string }> {
 
-        console.log('inside--', body)
+        console.log('inside--', body.urlTemplate)
         const metadataHash = body.metadataHash;
         const metadataBytes = new TextEncoder().encode(metadataHash);
 
         console.log('metadataBytes;metadataBytes',metadataBytes)
-
 
         try {
 
@@ -541,27 +545,44 @@ export class Transaction {
                         metadataBytes
                         ],
                         foreignApps: [],
-                        foreignAssets:body.tokens,
+                        foreignAssets:body.tokenIds,
                         accounts: [body.reserveAddress],
                         fee:1000,
                     }
                 }
             ];
 
-            // console.log('transactionsOne--',transactionsOne)
+            console.log('transactionsOne---', transactionsOne);
+
+
 
             const responseNFT = await this.txnService.groupTransactionWithAlgosdk(
                 body.receipient_key,
                 transactionsOne
             );
 
-            console.log('responseNFT-',responseNFT.txnId)
+                const token = "";
+                const server = "https://testnet-api.algonode.cloud";
+                const port = "443";
+
+                console.log("insidee--- assetcreation");
+
+                const algodclient = new algosdk.Algodv2(token, server, port);
+
+            console.log('responseNFT-',responseNFT.txnIds, responseNFT.txnIds[0],responseNFT.txnIds[1])
+
+            const confirmedTxn = await algosdk.waitForConfirmation(algodclient, responseNFT.txnIds[1], 3);
+            console.log('confirmedTxn---',confirmedTxn)
+
+                const assetIndex = confirmedTxn.innerTxns[0].assetIndex
+                // const assetIndex = confirmedTxn["inner-txns"][0]["asset-index"];
+
+            console.log(`Asset ID created:2 ${assetIndex}`);
 
             // return
-
-            if(responseNFT.txnId){
+            if(Number(assetIndex)){
                 console.log('inside opt in')
-               const responseOBJ =  await this.txnService.optInAsset(737223882, body.receipient_key)
+               const responseOBJ =  await this.txnService.optInAsset(Number(assetIndex), body.receipient_key)
                 console.log('inside responseOBJ',responseOBJ)
                 if(responseOBJ.txnId) {
                     console.log('inside transfer')
@@ -582,42 +603,87 @@ export class Transaction {
                                 globalSchema:undefined,
                                 localSchema:undefined,
                                 appArgs: [  new Uint8Array( sha512_256.array(Buffer.from("get_yojana_token(pay,uint64)void")).slice(0, 4)),
-                                    algosdk.encodeUint64(737223882),
+                                    algosdk.encodeUint64(Number(assetIndex)),
                                 ],
                                 foreignApps: [],
-                                foreignAssets:[737223882],
+                                foreignAssets:[Number(assetIndex)],
                                 accounts: [],
                                 fee:2000,
                             }
                         }
                     ];
 
-                    console.log('transactionsOne--',transactionsOne)
 
                     const responseNFT = await this.txnService.groupTransactionWithAlgosdk(
                         body.receipient_key,
                         transactionstwo
                     );
-                    console.log('responseNFT---transfer--',responseNFT.txnId)
                 }
-
             }
-
-
             return responseNFT;
-
         } catch (e) {
             console.log('eeee', e)
         }
-
     }
 
 
 
+    // Criteria token claim - optin and claim
 
+    @ApiBody({
+        description: "Claim token",
+        schema: {
+            type: "object",
+            properties: {
+                from: { type: "string" },
+                application_id: { type: "number" },
+                assetId: { type: "number" },
+            },
+        },
+    })
+    @Post("hashi/claim-token")
+    async claimToken(
+        @Body() body: { from: string; application_id: number; assetId: number }
+    ) {
+        const transactions = [
+            {
+                type: "application" as const,
+                params: {
+                    appIndex: Number(body.application_id),
+                    appArgs: [
+                        new Uint8Array(
+                            sha512_256
+                                .array(Buffer.from("opt_in_to_asset(pay)void"))
+                                .slice(0, 4)
+                        ),
+                    ],
+                    // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
+                    foreignAssets: [Number(body.assetId)],
+                    fee: 2000,
+                },
+            },
+            {
+                type: "application" as const,
+                params: {
+                    appIndex: Number(body.application_id),
+                    appArgs: [
+                        new Uint8Array(
+                            sha512_256.array(Buffer.from("claim()void")).slice(0, 4)
+                        ),
+                    ],
+                    // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
+                    foreignAssets: [Number(body.assetId)],
+                    fee: 2000,
+                },
+            },
+        ];
 
+        console.log('transactions---', transactions)
 
-
-
+        return await this.txnService.groupTransactionWithAlgosdk(
+            body.from,
+            transactions
+        );
+    }
 
 }
