@@ -516,7 +516,8 @@ export class Transaction {
         console.log('inside--', body.urlTemplate)
         const metadataHash = body.metadataHash;
         const metadataBytes = new TextEncoder().encode(metadataHash);
-
+        let responseNFTtransactionsOne: any;
+        let responseNFTtransactionsTwo: any;
         console.log('metadataBytes;metadataBytes',metadataBytes)
 
         try {
@@ -554,9 +555,7 @@ export class Transaction {
 
             console.log('transactionsOne---', transactionsOne);
 
-
-
-            const responseNFT = await this.txnService.groupTransactionWithAlgosdk(
+             responseNFTtransactionsOne = await this.txnService.groupTransactionWithAlgosdk(
                 body.receipient_key,
                 transactionsOne
             );
@@ -569,17 +568,13 @@ export class Transaction {
 
                 const algodclient = new algosdk.Algodv2(token, server, port);
 
-            console.log('responseNFT-',responseNFT.txnIds, responseNFT.txnIds[0],responseNFT.txnIds[1])
-
-            const confirmedTxn = await algosdk.waitForConfirmation(algodclient, responseNFT.txnIds[1], 3);
+            const confirmedTxn = await algosdk.waitForConfirmation(algodclient, responseNFTtransactionsOne.txnIds[1], 3);
             console.log('confirmedTxn---',confirmedTxn)
 
-                const assetIndex = confirmedTxn.innerTxns[0].assetIndex
-                // const assetIndex = confirmedTxn["inner-txns"][0]["asset-index"];
+            const assetIndex = confirmedTxn.innerTxns[0].assetIndex
 
             console.log(`Asset ID created:2 ${assetIndex}`);
 
-            // return
             if(Number(assetIndex)){
                 console.log('inside opt in')
                const responseOBJ =  await this.txnService.optInAsset(Number(assetIndex), body.receipient_key)
@@ -614,13 +609,13 @@ export class Transaction {
                     ];
 
 
-                    const responseNFT = await this.txnService.groupTransactionWithAlgosdk(
+                     responseNFTtransactionsTwo = await this.txnService.groupTransactionWithAlgosdk(
                         body.receipient_key,
                         transactionstwo
                     );
                 }
             }
-            return responseNFT;
+            return responseNFTtransactionsTwo;
         } catch (e) {
             console.log('eeee', e)
         }
