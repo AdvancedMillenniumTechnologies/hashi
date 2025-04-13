@@ -98,21 +98,27 @@ export class TransactionService implements OnModuleInit {
     amt: number,
     suggestedParams: any
   ) {
-    const fromAddr = await this.get_public_key({ from });
+    try {
+      const fromAddr = await this.get_public_key({ from });
 
-    // const suggestedParams = await this.getSuggestedParams();
+      // const suggestedParams = await this.getSuggestedParams();
 
-    // Get a crafter that uses our custom PaymentTxBuilder
-    const crafter = CrafterFactory.getCrafter("algorand", this.configService);
+      // Get a crafter that uses our custom PaymentTxBuilder
+      const crafter = CrafterFactory.getCrafter("algorand", this.configService);
 
-    // Use our custom payment method that properly handles group IDs
-    return crafter.payment(
-      fromAddr,
-      to,
-      amt,
-      Number(suggestedParams.firstValid),
-      Number(suggestedParams.lastValid)
-    );
+      console.log("params passed here is ======== ", fromAddr, to, amt);
+
+      // Use our custom payment method that properly handles group IDs
+      return crafter.payment(
+        fromAddr,
+        to,
+        amt,
+        Number(suggestedParams.firstValid),
+        Number(suggestedParams.lastValid)
+      );
+    } catch (error) {
+      console.log("Error in makePaymentTxn:", error);
+    }
   }
 
   /**
@@ -755,14 +761,20 @@ export class TransactionService implements OnModuleInit {
         return { txnId, error: null };
       } catch (error) {
         console.error("Error in group transaction processing:", error);
-        return {
-          txnId: null,
-          error: error.message || "Unknown error in group transaction",
-        };
+        throw new Error(
+          error.response?.data?.message ||
+            error.message ||
+            "Unknown error in group transaction processing"
+        );
       }
     } catch (error) {
       console.error("Error in groupTransactionWithAlgosdk:", error);
-      return { txnId: null, error: error.message || "Unknown error" };
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Unknown error in group transaction processing"
+      );
+      // return { txnId: null, error: error.message || "Unknown error" };
     }
   }
 

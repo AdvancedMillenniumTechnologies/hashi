@@ -944,10 +944,16 @@ export class Transaction {
           ],
           // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
           foreignAssets: [body.assetId],
-          fee: 2000,
+          fee: 1000,
         },
       },
     ];
+
+    console.log(
+      "Asset id passed ===== ===== ===== ",
+      JSON.stringify(transactions, null, 2),
+      "\n\n\n\n"
+    );
 
     return await this.txnService.groupTransactionWithAlgosdk(
       body.from,
