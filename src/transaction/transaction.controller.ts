@@ -15,123 +15,163 @@ import { concatArrays } from "../utils/utils"
 import { log } from "console";
 import {Uint64Schema} from "algosdk/dist/types/encoding/schema";
 
-
 // DTO for required parameters
 export class CreateAssetRequiredDto {
-    @IsString()
-    from: string;
+  @IsString()
+  from: string;
 
-    @IsString()
-    unit: string;
+  @IsString()
+  unit: string;
 
-    @IsNumber()
-    @Type(() => Number)
-    decimals: number;
+  @IsNumber()
+  @Type(() => Number)
+  decimals: number;
 
-    @IsNumber()
-    @Type(() => Number)
-    totalTokens: number;
+  @IsNumber()
+  @Type(() => Number)
+  totalTokens: number;
 }
 
 // DTO for optional parameters
 export class CreateAssetOptionalDto {
-    @IsString()
-    @IsOptional()
-    assetName?: string;
+  @IsString()
+  @IsOptional()
+  assetName?: string;
 
-    @IsString()
-    @IsOptional()
-    url?: string;
+  @IsString()
+  @IsOptional()
+  url?: string;
 
-    @IsBoolean()
-    @IsOptional()
-    defaultFrozen?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  defaultFrozen?: boolean;
 
-    @IsString()
-    @IsOptional()
-    managerAddress?: string;
+  @IsString()
+  @IsOptional()
+  managerAddress?: string;
 
-    @IsString()
-    @IsOptional()
-    reserveAddress?: string;
+  @IsString()
+  @IsOptional()
+  reserveAddress?: string;
 
-    @IsString()
-    @IsOptional()
-    freezeAddress?: string;
+  @IsString()
+  @IsOptional()
+  freezeAddress?: string;
 
-    @IsString()
-    @IsOptional()
-    clawbackAddress?: string;
+  @IsString()
+  @IsOptional()
+  clawbackAddress?: string;
 }
 
 // Combined DTO
-export class CreateAssetDto extends CreateAssetRequiredDto implements Partial<CreateAssetOptionalDto> {
-    assetName?: string;
-    url?: string;
-    defaultFrozen?: boolean;
-    managerAddress?: string;
-    reserveAddress?: string;
-    freezeAddress?: string;
-    clawbackAddress?: string;
+export class CreateAssetDto
+  extends CreateAssetRequiredDto
+  implements Partial<CreateAssetOptionalDto>
+{
+  assetName?: string;
+  url?: string;
+  defaultFrozen?: boolean;
+  managerAddress?: string;
+  reserveAddress?: string;
+  freezeAddress?: string;
+  clawbackAddress?: string;
 }
 
 @ApiTags("Transaction")
 @Controller("Transaction")
 export class Transaction {
-    constructor(private readonly walletService: WalletService, private readonly configService: ConfigService, private readonly txnService: TransactionService) {}
+  constructor(
+    private readonly walletService: WalletService,
+    private readonly configService: ConfigService,
+    private readonly txnService: TransactionService
+  ) {}
 
+  @Post("payment")
+  async makePayment(
+    @Body() body: { from: string; to: string; amt: number }
+  ): Promise<{ txnId: string }> {
+    const amount = Number(body.amt);
+    return await this.txnService.makePayment(body.from, body.to, amount);
+    // return await this.txnService.makePayment('test', 'VYG6BEXIW7YKJW3X5MUMYWZU226IPFIJLBZYQJ3FRWMRNR4IT7Q6TIAFWA', 1000)
+  }
 
-    @Post("payment")
-    async makePayment(@Body() body: { from: string, to: string, amt: number }): Promise<{txnId:string}> {
-        const amount = Number(body.amt)
-        return await this.txnService.makePayment(body.from, body.to, amount)
-        // return await this.txnService.makePayment('test', 'VYG6BEXIW7YKJW3X5MUMYWZU226IPFIJLBZYQJ3FRWMRNR4IT7Q6TIAFWA', 1000)
+  /**
+   *
+    from: string;
+    unit: string;
+    decimals: number;
+    totalTokens: number;
+    assetName?: string;
+    url?: string;
+    defaultFrozen?: boolean;
+    managerAddress?: string;
+    reserveAddress?: string;
+    freezeAddress?: string;
+    clawbackAddress?: string;
+   */
+  @ApiBody({
+    description: "Create an asset",
+    schema: {
+      type: "object",
+      properties: {
+        from: { type: "string" },
+        unit: { type: "string" },
+        decimals: { type: "number" },
+        totalTokens: { type: "number" },
+        assetName: { type: "string" },
+      },
+      required: ["from", "unit", "decimals", "totalTokens"],
+    },
+  })
+  @Post("asset-creation")
+  async createAsset(
+    @Body() body: CreateAssetDto
+  ): Promise<{ assetId: string }> {
+    console.log("bodyhashiiiii---", body);
 
+    const decimals = Number(body.decimals);
+    const totalTokens = Number(body.totalTokens);
+
+    let defaultFrozen = false;
+    if (body.defaultFrozen !== undefined) {
+      // If it's already a boolean, use it directly
+      if (typeof body.defaultFrozen === "boolean") {
+        defaultFrozen = body.defaultFrozen;
+      }
+      // If it's a string 'true' or 'false', convert appropriately
+      else if (typeof body.defaultFrozen === "string") {
+        defaultFrozen = body.defaultFrozen === "true";
+      }
     }
 
-    @Post("asset-creation")
-    async createAsset(@Body() body: CreateAssetDto): Promise<{ assetId: string}> {
+    const params = {
+      assetName: body.assetName,
+      url: body.url,
+      defaultFrozen: defaultFrozen,
+      managerAddress: body.managerAddress,
+      reserveAddress: body.reserveAddress,
+      freezeAddress: body.freezeAddress,
+      clawbackAddress: body.clawbackAddress,
+    };
 
-        console.log('bodyhashiiiii---', body)
+    console.log("params", params);
 
-        const decimals = Number(body.decimals)
-        const totalTokens = Number(body.totalTokens)
+    return await this.txnService.asset(
+      body.from,
+      body.unit,
+      decimals,
+      totalTokens,
+      params
+    );
 
-        let defaultFrozen = false;
-        if (body.defaultFrozen !== undefined) {
-            // If it's already a boolean, use it directly
-            if (typeof body.defaultFrozen === 'boolean') {
-                defaultFrozen = body.defaultFrozen;
-            } 
-            // If it's a string 'true' or 'false', convert appropriately
-            else if (typeof body.defaultFrozen === 'string') {
-                defaultFrozen = body.defaultFrozen === 'true';
-            }
-        }
+    // const assetId = await this.txnService.asset('test', 'kavya', 0, 1, { assetName: 'test', url: 'http://test.com', defaultFrozen: false,
+    //     managerAddress: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M',
+    //     reserveAddress: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M',
+    //     freezeAddress: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M',
+    //     clawbackAddress: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M' })
 
-        const params = {
-            assetName: body.assetName,
-            url: body.url,
-            defaultFrozen: defaultFrozen,
-            managerAddress: body.managerAddress,
-            reserveAddress: body.reserveAddress,
-            freezeAddress: body.freezeAddress,
-            clawbackAddress: body.clawbackAddress
-        }
-
-        console.log('params',params);
-        
-
-        return await this.txnService.asset(body.from, body.unit, decimals, totalTokens, params)
-        
-        // const assetId = await this.txnService.asset('test', 'kavya', 0, 1, { assetName: 'test', url: 'http://test.com', defaultFrozen: false, 
-        //     managerAddress: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M', 
-        //     reserveAddress: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M', 
-        //     freezeAddress: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M', 
-        //     clawbackAddress: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M' })
-
-        // return assetId
-    }
+    // return assetId
+  }
 
     /**
      * Create and submit a group transaction with multiple transaction types
@@ -216,222 +256,327 @@ export class Transaction {
         }
     }
 
-    @Post("asset-transfer")
-    async transferAsset(@Body() body: { assetId: number, from: string, to: string, amount: number }): Promise<{ txnId: string, error:string }> {
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        assetId: { type: "number" },
+        from: { type: "string" },
+        to: { type: "string" },
+        amount: { type: "number" },
+      },
+    },
+  })
+  @Post("asset-transfer")
+  async transferAsset(
+    @Body() body: { assetId: number; from: string; to: string; amount: number }
+  ): Promise<{ txnId: string; error: string }> {
+    const assetId = Number(body.assetId);
+    const amount = Number(body.amount);
 
-        const assetId = Number(body.assetId)
-        const amount = Number(body.amount)
+    return await this.txnService.transferToken(
+      assetId,
+      body.from,
+      body.to,
+      amount
+    );
 
-        return await this.txnService.transferToken(assetId, body.from, body.to, amount)
+    // return { txnId : await this.txnService.transferToken(734471494, 'test ', 'V5LR6C5SVHBQY3SPTEPD5WEGNBBUDNEP2MSDIONQIODZXZHRMC6QF3CTZI', 1)}
+  }
 
-        // return { txnId : await this.txnService.transferToken(734471494, 'test ', 'V5LR6C5SVHBQY3SPTEPD5WEGNBBUDNEP2MSDIONQIODZXZHRMC6QF3CTZI', 1)}
+  @ApiBody({
+    description: "Opt-in to an asset",
+    schema: {
+      type: "object",
+      properties: {
+        assetId: {
+          type: "number",
+          description: "Asset ID to opt-in to",
+        },
+        from: {
+          type: "string",
+          description: "Sender address",
+        },
+      },
+      required: ["assetId", "from"],
+    },
+  })
+  @Post("opt-in-asset")
+  async optInAsset(
+    @Body() body: { assetId: number; from: string }
+  ): Promise<{ txnId: string }> {
+    const assetId = Number(body.assetId);
+
+    return await this.txnService.optInAsset(assetId, body.from);
+    // return { txnId : await this.txnService.optInAsset(734469357, 'test1')}
+  }
+
+  @Post("opt-out-asset")
+  async optOutAsset(
+    @Body() body: { assetId: number; from: string; close: string }
+  ): Promise<{ txnId: string }> {
+    const assetId = Number(body.assetId);
+
+    return await this.txnService.optOutAsset(assetId, body.from, body.close);
+  }
+
+  // =======================================================================================================
+
+  /**
+   * Creates a transaction group with multiple transaction types in the specified order
+   */
+  @Post("group-transaction")
+  async groupTransaction(
+    @Body()
+    body: {
+      from: string;
+      transactions: Array<{
+        type: "payment" | "application" | "asset-transfer" | "asset-create";
+        params: any;
+      }>;
     }
+  ): Promise<{ txnId: string; error: string }> {
+    console.log("Body data ------- ", body);
+    return await this.txnService.groupTransactionWithAlgosdk(
+      body.from,
+      body.transactions
+    );
+  }
 
-    @Post("opt-in-asset")
-    async optInAsset(@Body() body: { assetId: number, from: string }): Promise<{ txnId: string }> {
-        const assetId = Number(body.assetId)    
-    
-        return await this.txnService.optInAsset(assetId, body.from)
-        // return { txnId : await this.txnService.optInAsset(734469357, 'test1')}
-    }
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        from: { type: "string" },
+        receiverAddress: { type: "string" },
+        amount: { type: "number" },
+        assetId: { type: "number" },
+      },
+    },
+  })
+  /**
+   * Example of a group transaction with payment and asset transfer
+   * This demonstrates how to create a predefined group transaction
+   */
+  @Post("example-group-transaction")
+  async exampleGroupTransaction() // @Body()
+  // body: {
+  //   from: string;
+  //   receiverAddress: string;
+  //   amount: number;
+  //   assetId: number;
+  // }
+  : Promise<{ txnId: string; error: string }> {
+    // Create a group transaction with two transactions:
+    // 1. A payment transaction
+    // 2. An asset transfer transaction
 
-    @Post("opt-out-asset")
-    async optOutAsset(@Body() body: { assetId: number, from: string, close: string }): Promise<{ txnId: string }> {
-        const assetId = Number(body.assetId)    
-    
-        return await this.txnService.optOutAsset(assetId, body.from, body.close)
-    }
+    const transactions = [
+      {
+        type: "payment" as const,
+        params: {
+          to: "TF37ZZIL3JQPPKPZIQW2EIJZYSIQODCW5GAYH3SCTVPTYHOUFHOPTQJHWQ", //body.receiverAddress,
+          amount: 202000, //body.amount
+        },
+      },
+      {
+        type: "application" as const,
+        params: {
+          appIndex: 737102386,
+          appArgs: [
+            new Uint8Array(
+              sha512_256
+                .array(Buffer.from("opt_in_to_asset(pay)void"))
+                .slice(0, 4)
+            ),
+          ],
+          // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
+          foreignAssets: [737102357],
+          fee: 2000,
+        },
+      },
+      {
+        type: "application" as const,
+        params: {
+          appIndex: 737102386,
+          appArgs: [
+            new Uint8Array(
+              sha512_256.array(Buffer.from("claim()void")).slice(0, 4)
+            ),
+          ],
+          // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
+          foreignAssets: [737102357],
+          fee: 2000,
+        },
+      },
+    ];
 
-    /**
-     * Creates a transaction group with multiple transaction types in the specified order
-     */
-    @Post("group-transaction")
-    async groupTransaction(@Body() body: { 
-        from: string, 
-        transactions: Array<{
-            type: 'payment' | 'application' | 'asset-transfer' | 'asset-create',
-            params: any
-        }>
-    }): Promise<{ txnId: string, error: string }> {
-        return await this.txnService.groupTransaction(
-            body.from,
-            body.transactions
+    return await this.txnService.groupTransactionWithAlgosdk(
+      "test",
+      transactions
+    );
+
+    // return await this.txnService.groupTransaction(body.from, transactions);
+  }
+
+  @Post("example-group-transaction-1")
+  async exampleGroupTransaction_1(): Promise<{ txnId: string; error: string }> {
+    // Create a group transaction with two transactions:
+    // 1. A payment transaction
+    // 2. An asset transfer transaction
+
+    const transactions = [
+      {
+        type: "payment" as const,
+        params: {
+          to: "5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI", //body.receiverAddress,
+          amount: 100000, //body.amount
+        },
+      },
+      {
+        type: "payment" as const,
+        params: {
+          to: "V5LR6C5SVHBQY3SPTEPD5WEGNBBUDNEP2MSDIONQIODZXZHRMC6QF3CTZI", //body.receiverAddress,
+          amount: 100000, //body.amount
+        },
+      },
+    ];
+
+    return await this.txnService.groupTransactionWithAlgosdk(
+      "test",
+      transactions
+    );
+
+    // return await this.txnService.groupTransaction(
+    //     body.from,
+    //     transactions
+    // );
+  }
+
+  // =======================================================================================================
+
+  getLocalAlgodClient() {
+    const algodToken = "a".repeat(64);
+    const algodServer = "http://localhost";
+    const algodPort = process.env.ALGOD_PORT || "4001";
+
+    const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
+    return algodClient;
+  }
+
+  async algosdkGroupTransaction(
+    @Body() body: {}
+  ): Promise<{ txnId: string; error: string }> {
+    // const hashitxn = await this.exampleGroupTransaction_1();
+
+    const acct1 = "5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI";
+    const acct2 = "V5LR6C5SVHBQY3SPTEPD5WEGNBBUDNEP2MSDIONQIODZXZHRMC6QF3CTZI";
+
+    // example: ATOMIC_CREATE_TXNS
+    const suggestedParams = await this.txnService.getSuggestedParams();
+
+    const alicesTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+      sender: "C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M",
+      receiver: acct1,
+      amount: 1e5,
+      suggestedParams,
+    });
+
+    const bobsTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+      sender: "C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M",
+      receiver: acct2,
+      amount: 1e5,
+      suggestedParams,
+    });
+    // example: ATOMIC_CREATE_TXNS
+
+    // example: ATOMIC_GROUP_TXNS
+    const encodedTxns = [alicesTxn, bobsTxn];
+
+    console.log(encodedTxns);
+
+    const txnGroup = algosdk.assignGroupID(encodedTxns);
+
+    console.log(txnGroup);
+
+    const txnCrafter = new AlgorandTransactionCrafter(
+      "testnet-v1.0",
+      "SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI="
+    );
+
+    // assignGroupID returns the same txns with the group ID set
+    // const txnGroup = algosdk.assignGroupID(txnArray);
+    const signedTxns = [];
+
+    // First sign all transactions
+    for (let i = 0; i < txnGroup.length; i++) {
+      try {
+        const signedTxn = await this.txnService.sign(
+          txnGroup[i].bytesToSign(),
+          "test"
         );
-    }
-
-    /**
-     * Example of a group transaction with payment and asset transfer
-     * This demonstrates how to create a predefined group transaction
-     */
-    @Post("example-group-transaction")
-    async exampleGroupTransaction(@Body() body: { 
-        from: string,
-        receiverAddress: string,
-        amount: number,
-        assetId: number
-    }): Promise<{ txnIds: Array<string>, error: string }> {
-        // Create a group transaction with two transactions:
-        // 1. A payment transaction
-        // 2. An asset transfer transaction
-        
-        const transactions = [
-            {
-                type: 'payment' as const,
-                params: {
-                    to: '5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI',//body.receiverAddress,
-                    amount: 202000//body.amount
-                }
-            },
-            {
-                type: 'application' as const,
-                params: {
-                    appIndex: 736444345,
-                    appArgs: [new Uint8Array(sha512_256.array(Buffer.from("opt_in_to_asset(pay)void")).slice(0, 4))],
-                    // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
-                    foreignAssets: [735261053],
-                    fee: 2000
-                }
-            }
-        ];
-        
-        return await this.txnService.groupTransactionWithAlgosdk(
-            'test',
-            transactions
+        const ready = await txnCrafter.addSignature(
+          txnGroup[i].bytesToSign(),
+          signedTxn
         );
-
-        // return await this.txnService.groupTransaction(
-        //     body.from,
-        //     transactions
-        // );
-    }
-
-    @Post("example-group-transaction-1")
-    async exampleGroupTransaction_1(): Promise<{ txnIds: Array<string>, error: string }> {
-        // Create a group transaction with two transactions:
-        // 1. A payment transaction
-        // 2. An asset transfer transaction
-
-        const transactions = [
-            {
-                type: 'payment' as const,
-                params: {
-                    to: '5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI',//body.receiverAddress,
-                    amount: 100000//body.amount
-                }
-            },
-            {
-                type: 'payment' as const,
-                params: {
-                    to: 'V5LR6C5SVHBQY3SPTEPD5WEGNBBUDNEP2MSDIONQIODZXZHRMC6QF3CTZI',//body.receiverAddress,
-                    amount: 100000//body.amount
-                }
-            }
-        ];
-
-        return await this.txnService.groupTransactionWithAlgosdk(
-            'test',
-            transactions
+        signedTxns.push(ready);
+      } catch (error) {
+        console.error(`Error signing transaction ${i + 1}:`, error);
+        throw new Error(
+          `Failed to sign transaction ${i + 1}: ${error.message}`
         );
-
-        // return await this.txnService.groupTransaction(
-        //     body.from,
-        //     transactions
-        // );
-    }
-
-    getLocalAlgodClient() {
-        const algodToken = 'a'.repeat(64);
-        const algodServer = 'http://localhost';
-        const algodPort = process.env.ALGOD_PORT || '4001';
-
-        const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
-        return algodClient;
       }
-
-    async algosdkGroupTransaction(@Body() body: {
-    }): Promise<{ txnId: string, error: string }> {
-
-        // const hashitxn = await this.exampleGroupTransaction_1();
-
-        const acct1 = '5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI';
-        const acct2 = 'V5LR6C5SVHBQY3SPTEPD5WEGNBBUDNEP2MSDIONQIODZXZHRMC6QF3CTZI';
-
-        // example: ATOMIC_CREATE_TXNS
-        const suggestedParams = await this.txnService.getSuggestedParams();
-
-        const alicesTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            sender: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M',
-            receiver: acct1,
-            amount: 1e5,
-            suggestedParams,
-        });
-
-        const bobsTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            sender: 'C6A7MF2QX27SARKX32PUH2WWTUMFTH3UUBQ4DU4KBNXB4N2DTENO6HVF3M',
-            receiver: acct2,
-            amount: 1e5,
-            suggestedParams,
-        });
-        // example: ATOMIC_CREATE_TXNS
-
-
-        // example: ATOMIC_GROUP_TXNS
-        const encodedTxns = [alicesTxn, bobsTxn];
-
-        console.log(encodedTxns);
-
-        const txnGroup = algosdk.assignGroupID(encodedTxns);
-
-        console.log(txnGroup);
-
-
-        const txnCrafter = new AlgorandTransactionCrafter('testnet-v1.0', 'SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=')
-
-        // assignGroupID returns the same txns with the group ID set
-        // const txnGroup = algosdk.assignGroupID(txnArray);
-        const signedTxns = [];
-
-            // First sign all transactions
-            for (let i = 0; i < txnGroup.length; i++) {
-                try {
-                    const signedTxn = await this.txnService.sign(txnGroup[i].bytesToSign(), 'test');
-                    const ready = await txnCrafter.addSignature(txnGroup[i].bytesToSign(), signedTxn);
-                    signedTxns.push(ready);
-                } catch (error) {
-                    console.error(`Error signing transaction ${i+1}:`, error);
-                    throw new Error(`Failed to sign transaction ${i+1}: ${error.message}`);
-                }
-            }
-
-            // Now submit all transactions as a group
-            try {
-
-                const bytestoSubmit = concatArrays(...signedTxns);
-
-                const txnId = await this.walletService.submitTransaction(bytestoSubmit);
-
-                return { txnId, error: null };
-            } catch (error) {
-                console.error('Error in group transaction processing:', error);
-                return { txnId: null, error: error.message || 'Unknown error in group transaction' };
-            }
-
-
-        return { txnId: '', error: '' };
     }
 
+    // Now submit all transactions as a group
+    try {
+      const bytestoSubmit = concatArrays(...signedTxns);
 
-   //  Criteria application deployment
+      const txnId = await this.walletService.submitTransaction(bytestoSubmit);
 
+      return { txnId, error: null };
+    } catch (error) {
+      console.error("Error in group transaction processing:", error);
+      return {
+        txnId: null,
+        error: error.message || "Unknown error in group transaction",
+      };
+    }
+
+    return { txnId: "", error: "" };
+  }
+
+    //  Criteria application deployment
+    //736766885
+    @ApiBody({
+        description: "Application call transaction",
+        schema: {
+            type: "object",
+            properties: {
+                appIndex: { type: "number" },
+                approvalProgram: { type: "string" },
+                clearProgram: { type: "string" },
+            },
+        },
+    })
    @Post('application-call')
    async applicationCall(@Body() body: {
+    // from: string,
+    // approvalProgram?: string,
+    // clearProgram?: string,
+    // globalSchema?: { numByteSlice: number, numUint: number },
+    // localSchema?: { numByteSlice: number, numUint: number } ,
     appIndex?: number,
     approvalProgram?: string,
     clearProgram?: string,
+    // appArgs?: Array<Uint8Array>,
+    // foreignApps?: Array<number>,
+    // foreignAssets?: Array<number>,
+    // accounts?: Array<string>
+    // fee?: number
     }
-    ): Promise<{ txnId: string, error: string }> {
-
-       console.log('body inside hashiii--', body.appIndex)
+  ): Promise<{ txnId: string; error: string }> {
+    console.log("body inside hashiii--", body.appIndex);
 
        const assetId = Number(body.appIndex)
 
@@ -450,10 +595,10 @@ export class Transaction {
     }
 
     // yojana application deployment
-
     @Post('deploy-yojana')
     async yojanaApplicationCall(@Body() body: {
         name?: string,
+        counter?: any,
         token?: any,
         approvalProgram?:string,
         clearProgram?: string
@@ -461,6 +606,7 @@ export class Transaction {
 
         console.log('body inside hashiii--1', body.name)
         const name = body.name;
+        const counter = body.counter;
         const token = body.token;
 
         const uint64Type = new algosdk.ABIUintType(64);
@@ -631,54 +777,53 @@ export class Transaction {
             type: "object",
             properties: {
                 from: { type: "string" },
-                application_id: { type: "number" },
+                appIndex: { type: "number" },
                 assetId: { type: "number" },
             },
         },
     })
-    @Post("hashi/claim-token")
+    @Post("claim-token")
     async claimToken(
-        @Body() body: { from: string; application_id: number; assetId: number }
+        @Body() body: { from: string; appIndex: number; assetId: number }
     ) {
         const transactions = [
             {
-                type: "application" as const,
+                type: "opt-in" as const,
                 params: {
-                    appIndex: Number(body.application_id),
-                    appArgs: [
-                        new Uint8Array(
-                            sha512_256
-                                .array(Buffer.from("opt_in_to_asset(pay)void"))
-                                .slice(0, 4)
-                        ),
-                    ],
-                    // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
-                    foreignAssets: [Number(body.assetId)],
-                    fee: 2000,
+                    assetIndex: body.assetId, //body.amount
                 },
             },
             {
                 type: "application" as const,
                 params: {
-                    appIndex: Number(body.application_id),
+                    appIndex: body.appIndex,
                     appArgs: [
                         new Uint8Array(
                             sha512_256.array(Buffer.from("claim()void")).slice(0, 4)
                         ),
                     ],
                     // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
-                    foreignAssets: [Number(body.assetId)],
-                    fee: 2000,
+                    foreignAssets: [body.assetId],
+                    fee: 1000,
                 },
             },
         ];
 
-        console.log('transactions---', transactions)
+        console.log(
+            "Asset id passed ===== ===== ===== ",
+            JSON.stringify(transactions, null, 2),
+            "\n\n\n\n"
+        );
 
         return await this.txnService.groupTransactionWithAlgosdk(
             body.from,
             transactions
         );
-    }
 
+        // return await this.txnService.claimToken(
+        //   body.from,
+        //   body.appIndex,
+        //   body.assetId
+        // );
+    }
 }
