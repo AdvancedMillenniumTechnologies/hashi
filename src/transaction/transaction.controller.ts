@@ -335,7 +335,7 @@ export class Transaction {
         params: any;
       }>;
     }
-  ): Promise<{ txnId: string; error: string }> {
+  ): Promise<{ txnIds: string[]; error: string }> {
     console.log("Body data ------- ", body);
     return await this.txnService.groupTransactionWithAlgosdk(
       body.from,
@@ -366,7 +366,7 @@ export class Transaction {
   //   amount: number;
   //   assetId: number;
   // }
-  : Promise<{ txnId: string; error: string }> {
+  : Promise<{ txnIds: string[]; error: string }> {
     // Create a group transaction with two transactions:
     // 1. A payment transaction
     // 2. An asset transfer transaction
@@ -420,7 +420,7 @@ export class Transaction {
   }
 
   @Post("example-group-transaction-1")
-  async exampleGroupTransaction_1(): Promise<{ txnId: string; error: string }> {
+  async exampleGroupTransaction_1(): Promise<{ txnIds: string[]; error: string }> {
     // Create a group transaction with two transactions:
     // 1. A payment transaction
     // 2. An asset transfer transaction
@@ -804,7 +804,7 @@ export class Transaction {
                     ],
                     // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
                     foreignAssets: [body.assetId],
-                    fee: 1000,
+                    fee: 2000,
                 },
             },
         ];
