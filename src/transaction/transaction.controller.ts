@@ -561,26 +561,16 @@ export class Transaction {
     })
    @Post('application-call')
    async applicationCall(@Body() body: {
-    // from: string,
-    // approvalProgram?: string,
-    // clearProgram?: string,
-    // globalSchema?: { numByteSlice: number, numUint: number },
-    // localSchema?: { numByteSlice: number, numUint: number } ,
     appIndex?: number,
     approvalProgram?: string,
     clearProgram?: string,
-    // appArgs?: Array<Uint8Array>,
-    // foreignApps?: Array<number>,
-    // foreignAssets?: Array<number>,
-    // accounts?: Array<string>
-    // fee?: number
     }
-  ): Promise<{ txnId: string; error: string }> {
+  ): Promise<{ application_id: number; assetId: number }> {
     console.log("body inside hashiii--", body.appIndex);
 
        const assetId = Number(body.appIndex)
 
-        return await this.txnService.applicationCall(
+        const applicationCallResponse = await this.txnService.applicationCall(
             'test',
             0,
             body.approvalProgram,
@@ -591,6 +581,53 @@ export class Transaction {
             [], [], [],
             1000
             );
+
+        const appIndex = Number(applicationCallResponse.applicationId)
+        console.log('applicationCallResponse---', applicationCallResponse.applicationId)
+
+        const address = algosdk.getApplicationAddress(Number(applicationCallResponse.applicationId))
+        const stringAddress = address.toString();
+
+        const transactionsTransfer = [
+            {
+                type: 'payment' as const,
+                params: {
+                    to: stringAddress.toString(),
+                    amount: 200000
+                }
+            },
+            {
+                type: "application" as const,
+                params: {
+                    appIndex: appIndex,
+                    appArgs: [
+                        new Uint8Array(sha512_256.array(Buffer.from("opt_in_to_asset(pay)void")).slice(0, 4))
+                    ],
+                    foreignAssets: [assetId],
+                    fee: 2000,
+                    onComplete: 0,
+                },
+            },
+        ];
+
+
+        const responsetransactionsTransfer = await this.txnService.groupTransactionWithAlgosdk(
+            'test',
+            transactionsTransfer
+        );
+
+        console.log('responsetransactionsTransfer--', responsetransactionsTransfer)
+
+        const assetKaTransfer = await this.txnService.transferToken(
+            assetId,
+            'test',
+            stringAddress.toString(),
+            100
+        );
+
+        console.log('assetKaTransfer--', assetKaTransfer)
+
+        return { application_id: appIndex, assetId: assetId }
 
     }
 
@@ -657,7 +694,7 @@ export class Transaction {
         metadataBytes?: any,
         metadataHash?: any,
         tokenIds?: any
-    }): Promise<{ txnIds: Array<string>, error: string }> {
+    }): Promise<{ assetId: number }> {
 
         console.log('inside--', body.urlTemplate)
         const metadataHash = body.metadataHash;
@@ -761,7 +798,7 @@ export class Transaction {
                     );
                 }
             }
-            return responseNFTtransactionsTwo;
+            return {assetId: Number(assetIndex)};
         } catch (e) {
             console.log('eeee', e)
         }
