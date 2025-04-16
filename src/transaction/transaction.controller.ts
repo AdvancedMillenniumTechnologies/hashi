@@ -80,11 +80,14 @@ export class CreateAssetDto
 @ApiTags("Transaction")
 @Controller("Transaction")
 export class Transaction {
+    private readonly admin_key: string;
   constructor(
     private readonly walletService: WalletService,
     private readonly configService: ConfigService,
     private readonly txnService: TransactionService
-  ) {}
+  ) {
+      this.admin_key = this.configService.get<string>("HASHI_ADMIN_KEY")
+  }
 
   @Post("payment")
   async makePayment(
@@ -571,7 +574,7 @@ export class Transaction {
        const assetId = Number(body.appIndex)
 
         const applicationCallResponse = await this.txnService.applicationCall(
-            'superadmin',
+            this.admin_key,
             0,
             body.approvalProgram,
             body.clearProgram,
@@ -612,7 +615,7 @@ export class Transaction {
 
 
         const responsetransactionsTransfer = await this.txnService.groupTransactionWithAlgosdk(
-            'superadmin',
+            this.admin_key,
             transactionsTransfer
         );
 
@@ -620,15 +623,17 @@ export class Transaction {
 
         const assetKaTransfer = await this.txnService.transferToken(
             assetId,
-            'superadmin',
+            this.admin_key,
             stringAddress.toString(),
-            100
+            100000
         );
 
         console.log('assetKaTransfer--', assetKaTransfer)
 
+        // if(assetKaTransfer.txnId) {
+        //     return { application_id: appIndex, assetId: assetId }
+        // }
         return { application_id: appIndex, assetId: assetId }
-
     }
 
     // yojana application deployment
@@ -650,7 +655,7 @@ export class Transaction {
         const uint64ArrayType = new algosdk.ABIArrayDynamicType(uint64Type);
 
         const response =  await this.txnService.applicationCall(
-            'superadmin',
+            this.admin_key,
             0,
             body.approvalProgram,
             body.clearProgram,
