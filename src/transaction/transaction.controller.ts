@@ -571,7 +571,7 @@ export class Transaction {
        const assetId = Number(body.appIndex)
 
         const applicationCallResponse = await this.txnService.applicationCall(
-            'test',
+            'superadmin',
             0,
             body.approvalProgram,
             body.clearProgram,
@@ -612,7 +612,7 @@ export class Transaction {
 
 
         const responsetransactionsTransfer = await this.txnService.groupTransactionWithAlgosdk(
-            'test',
+            'superadmin',
             transactionsTransfer
         );
 
@@ -620,7 +620,7 @@ export class Transaction {
 
         const assetKaTransfer = await this.txnService.transferToken(
             assetId,
-            'test',
+            'superadmin',
             stringAddress.toString(),
             100
         );
@@ -650,7 +650,7 @@ export class Transaction {
         const uint64ArrayType = new algosdk.ABIArrayDynamicType(uint64Type);
 
         const response =  await this.txnService.applicationCall(
-            'test',
+            'superadmin',
             0,
             body.approvalProgram,
             body.clearProgram,
@@ -710,7 +710,7 @@ export class Transaction {
                     type: 'payment' as const,
                     params: {
                         to: body.application_address,
-                        amount: 100000  // change it to 0.1
+                        amount: 100000
                     }
                 },
                 {
@@ -839,7 +839,6 @@ export class Transaction {
                             sha512_256.array(Buffer.from("claim()void")).slice(0, 4)
                         ),
                     ],
-                    // accounts: ['5OD3JPPNBR2PYDCB2I2XJVW7FVPA7A6ECM3GXG5H6OOIG2HJLMS7SSPFKI'],
                     foreignAssets: [body.assetId],
                     fee: 2000,
                 },
@@ -856,11 +855,5 @@ export class Transaction {
             body.from,
             transactions
         );
-
-        // return await this.txnService.claimToken(
-        //   body.from,
-        //   body.appIndex,
-        //   body.assetId
-        // );
     }
 }
