@@ -21,6 +21,8 @@ EXPOSE 9200
 USER node
 
 RUN yarn
-RUN yarn build
+#RUN yarn build
+
+RUN yarn vault:transit
 
 CMD [ "yarn", "start:dev" ]
