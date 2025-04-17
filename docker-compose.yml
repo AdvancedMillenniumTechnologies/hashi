@@ -19,15 +19,15 @@ services:
       context: .
       dockerfile: ./Dockerfile
     image: hashi-api-dev
-    working_dir: /opt/app
-    command: ['npm', 'run', 'start:dev']
+    # working_dir: /opt/app
+    # command: ['npm', 'run', 'start:dev']
     container_name: hashi-api
     env_file:
       - ../Sewa-Deploy/ENV/hashi-api.env
     environment:
         - loglevel=none
     volumes:
-        - ../volume-hashiapi:/opt/app/
+        - .:/opt/app/
         - /opt/app/node_modules
         - /opt/app/volumes
     ports:
