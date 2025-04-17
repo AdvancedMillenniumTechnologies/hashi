@@ -20,9 +20,9 @@ EXPOSE 9200
 # Dont run as root
 USER node
 
-RUN yarn
+RUN npm install
 #RUN yarn build
 
-RUN yarn vault:transit
+# RUN npm run vault:transit
 
-CMD [ "yarn", "start:dev" ]
+CMD [ "npm", "run","start:dev" ]
