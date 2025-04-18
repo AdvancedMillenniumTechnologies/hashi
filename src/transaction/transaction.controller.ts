@@ -715,7 +715,7 @@ export class Transaction {
                     type: 'payment' as const,
                     params: {
                         to: body.application_address,
-                        amount: 100000
+                        amount: 200000 // 0.2
                     }
                 },
                 {
