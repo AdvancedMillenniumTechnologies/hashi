@@ -618,6 +618,7 @@ export class TransactionService implements OnModuleInit {
 
                 switch (txConfig.type) {
                     case 'payment':
+                      console.log('fromAddr-service--',fromAddr, txConfig.params.to,  txConfig.params.amount, suggestedParams)
                         // Payment transaction using algosdk
                         txObject = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
                             sender: fromAddr,

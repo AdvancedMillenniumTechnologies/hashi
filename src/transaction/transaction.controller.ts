@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Logger, Param, Post, Res, Query } from "@nestjs/common"
+import {
+    Body,
+    Controller,
+    Get,
+    Logger,
+    Param,
+    Post,
+    Res,
+    Query,
+    BadRequestException,
+    HttpException, InternalServerErrorException
+} from "@nestjs/common"
 import { WalletService } from "../wallet/wallet.service"
 import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -14,6 +25,7 @@ import { AlgorandEncoder, AlgorandTransactionCrafter, AssetParamsBuilder } from 
 import { concatArrays } from "../utils/utils"
 import { log } from "console";
 import {Uint64Schema} from "algosdk/dist/types/encoding/schema";
+import { sha256 } from 'js-sha256';
 
 // DTO for required parameters
 export class CreateAssetRequiredDto {
@@ -647,7 +659,7 @@ export class Transaction {
     }): Promise<{ application_id: number }> {
 
         console.log('body inside hashiii--1', body.name)
-        const name = body.name;
+        const name = "ss" + body.name;
         const counter = body.counter;
         const token = body.token;
 
@@ -701,13 +713,17 @@ export class Transaction {
         tokenIds?: any
     }): Promise<{ assetId: number }> {
 
-        console.log('inside--', body.urlTemplate)
         const metadataHash = body.metadataHash;
         const metadataBytes = new TextEncoder().encode(metadataHash);
+        console.log('metadataHash---', metadataHash)
+        const urlTemplate = "ss" + body.urlTemplate;
+        const assetName = "ss" + body.assetName;
+        const unitName = "ss" + body.unitName;
+
+        console.log('inside--', body.urlTemplate, body.assetName, body.unitName)
         let responseNFTtransactionsOne: any;
         let responseNFTtransactionsTwo: any;
-        console.log('metadataBytes;metadataBytes',metadataBytes)
-
+        let assetIndex: any;
         try {
 
             const transactionsOne = [
@@ -715,7 +731,7 @@ export class Transaction {
                     type: 'payment' as const,
                     params: {
                         to: body.application_address,
-                        amount: 200000 // 0.2
+                        amount: 201000
                     }
                 },
                 {
@@ -728,9 +744,9 @@ export class Transaction {
                         localSchema:undefined,
                         appArgs: [  new Uint8Array( sha512_256.array(Buffer.from("create_yojana_token(account,string,string,string,byte[],pay)void")).slice(0, 4)),
                         Uint8Array.of(1),
-                        Buffer.from(body.urlTemplate),
-                        Buffer.from(body.assetName),
-                        Buffer.from(body.unitName.replace(" ", "").toUpperCase().slice(0, 7)),
+                        Buffer.from(urlTemplate),
+                        Buffer.from(assetName),
+                        Buffer.from(unitName),
                         metadataBytes
                         ],
                         foreignApps: [],
@@ -741,71 +757,95 @@ export class Transaction {
                 }
             ];
 
-            console.log('transactionsOne---', transactionsOne);
+            console.log('transactionsOne---',body.receipient_key,  transactionsOne[1].params?.appArgs);
 
              responseNFTtransactionsOne = await this.txnService.groupTransactionWithAlgosdk(
-                body.receipient_key,
+                body.receipient_key.toString(),
                 transactionsOne
             );
 
-                const token = "";
-                const server = "https://testnet-api.algonode.cloud";
-                const port = "443";
+             if(responseNFTtransactionsOne.txnIds.length == 2){
 
-                console.log("insidee--- assetcreation");
+                 console.log('responseNFTtransactionsOne--',responseNFTtransactionsOne)
 
-                const algodclient = new algosdk.Algodv2(token, server, port);
+                 const token = "";
+                 const server = "https://testnet-api.algonode.cloud";
+                 const port = "443";
 
-            const confirmedTxn = await algosdk.waitForConfirmation(algodclient, responseNFTtransactionsOne.txnIds[1], 3);
-            console.log('confirmedTxn---',confirmedTxn)
+                 console.log("insidee--- assetcreation");
 
-            const assetIndex = confirmedTxn.innerTxns[0].assetIndex
+                 const algodclient = new algosdk.Algodv2(token, server, port);
 
-            console.log(`Asset ID created:2 ${assetIndex}`);
+                 const confirmedTxn = await algosdk.waitForConfirmation(algodclient, responseNFTtransactionsOne.txnIds[1], 3);
+                 console.log('confirmedTxn---',confirmedTxn)
 
-            if(Number(assetIndex)){
-                console.log('inside opt in')
-               const responseOBJ =  await this.txnService.optInAsset(Number(assetIndex), body.receipient_key)
-                console.log('inside responseOBJ',responseOBJ)
-                if(responseOBJ.txnId) {
-                    console.log('inside transfer')
-                    const transactionstwo = [
-                        {
-                            type: 'payment' as const,
-                            params: {
-                                to: body.application_address,
-                                amount: 100000
-                            }
-                        },
-                        {
-                            type: 'application' as const,
-                            params: {
-                                appIndex: Number(body.application_id),
-                                approvalProgram:undefined,
-                                clearProgram:undefined,
-                                globalSchema:undefined,
-                                localSchema:undefined,
-                                appArgs: [  new Uint8Array( sha512_256.array(Buffer.from("get_yojana_token(pay,uint64)void")).slice(0, 4)),
-                                    algosdk.encodeUint64(Number(assetIndex)),
-                                ],
-                                foreignApps: [],
-                                foreignAssets:[Number(assetIndex)],
-                                accounts: [],
-                                fee:2000,
-                            }
-                        }
-                    ];
+                 assetIndex = confirmedTxn.innerTxns[0].assetIndex
+
+                 console.log(`Asset ID created:2 ${assetIndex}`);
+
+                 if(Number(assetIndex)){
+                     console.log('inside opt in')
+                     const responseOBJ =  await this.txnService.optInAsset(Number(assetIndex), body.receipient_key)
+                     console.log('inside responseOBJ',responseOBJ)
+                     if(responseOBJ.txnId) {
+                         console.log('inside transfer')
+                         const transactionstwo = [
+                             {
+                                 type: 'payment' as const,
+                                 params: {
+                                     to: body.application_address,
+                                     amount: 200000
+                                 }
+                             },
+                             {
+                                 type: 'application' as const,
+                                 params: {
+                                     appIndex: Number(body.application_id),
+                                     approvalProgram:undefined,
+                                     clearProgram:undefined,
+                                     globalSchema:undefined,
+                                     localSchema:undefined,
+                                     appArgs: [  new Uint8Array( sha512_256.array(Buffer.from("get_yojana_token(pay,uint64)void")).slice(0, 4)),
+                                         algosdk.encodeUint64(Number(assetIndex)),
+                                     ],
+                                     foreignApps: [],
+                                     foreignAssets:[Number(assetIndex)],
+                                     accounts: [],
+                                     fee:2000,
+                                 }
+                             }
+                         ];
 
 
-                     responseNFTtransactionsTwo = await this.txnService.groupTransactionWithAlgosdk(
-                        body.receipient_key,
-                        transactionstwo
-                    );
-                }
+                         responseNFTtransactionsTwo = await this.txnService.groupTransactionWithAlgosdk(
+                             body.receipient_key,
+                             transactionstwo
+                         );
+                     }
+                 }
+                 console.log('responseNFTtransactionsTwo--',responseNFTtransactionsTwo)
+             }
+             // else {
+             //     throw new InternalServerErrorException("Creation of NFT failed");
+             // }
+
+
+            if(responseNFTtransactionsTwo.txnIds.length == 2) {
+                return {assetId: Number(assetIndex)};
             }
-            return {assetId: Number(assetIndex)};
+            // else {
+            //     throw new Error("Transfer of NFT failed")
+            // }
         } catch (e) {
             console.log('eeee', e)
+            // if (e instanceof HttpException) {
+            //     throw e;
+            // }
+            //
+            // // Otherwise, wrap it in a generic internal server error
+            // throw new InternalServerErrorException(
+            //     e?.message || "Something went wrong while creating NFT"
+            // );
         }
     }
 
