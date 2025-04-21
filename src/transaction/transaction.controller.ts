@@ -830,6 +830,8 @@ export class Transaction {
              // }
 
 
+
+
             if(responseNFTtransactionsTwo.txnIds.length == 2) {
                 return {assetId: Number(assetIndex)};
             }
