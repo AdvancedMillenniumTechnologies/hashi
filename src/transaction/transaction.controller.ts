@@ -1,14 +1,14 @@
 import {
-    Body,
-    Controller,
-    Get,
-    Logger,
-    Param,
-    Post,
-    Res,
-    Query,
-    BadRequestException,
-    HttpException, InternalServerErrorException
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Res,
+  Query,
+  BadRequestException,
+  HttpException, InternalServerErrorException
 } from "@nestjs/common"
 import { WalletService } from "../wallet/wallet.service"
 import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
@@ -17,14 +17,14 @@ import { EncoderFactory } from "../chain/encoder.factory"
 import { Crafter } from "../chain/crafter.role"
 import { ConfigService } from "@nestjs/config"
 import { CrafterFactory } from "../chain/crafter.factory"
-import {ApiBody, ApiTags} from "@nestjs/swagger"
+import { ApiBody, ApiTags } from "@nestjs/swagger"
 import { TransactionService } from "./transaction.service"
-import algosdk, {getApplicationAddress} from "algosdk";
-import {sha512_256} from "js-sha512";
+import algosdk, { getApplicationAddress } from "algosdk";
+import { sha512_256 } from "js-sha512";
 import { AlgorandEncoder, AlgorandTransactionCrafter, AssetParamsBuilder } from '@algorandfoundation/algo-models'
 import { concatArrays } from "../utils/utils"
 import { log } from "console";
-import {Uint64Schema} from "algosdk/dist/types/encoding/schema";
+import { Uint64Schema } from "algosdk/dist/types/encoding/schema";
 import { sha256 } from 'js-sha256';
 
 // DTO for required parameters
@@ -78,8 +78,7 @@ export class CreateAssetOptionalDto {
 // Combined DTO
 export class CreateAssetDto
   extends CreateAssetRequiredDto
-  implements Partial<CreateAssetOptionalDto>
-{
+  implements Partial<CreateAssetOptionalDto> {
   assetName?: string;
   url?: string;
   defaultFrozen?: boolean;
@@ -92,13 +91,13 @@ export class CreateAssetDto
 @ApiTags("Transaction")
 @Controller("Transaction")
 export class Transaction {
-    private readonly admin_key: string;
+  private readonly admin_key: string;
   constructor(
     private readonly walletService: WalletService,
     private readonly configService: ConfigService,
     private readonly txnService: TransactionService
   ) {
-      this.admin_key = this.configService.get<string>("HASHI_ADMIN_KEY")
+    this.admin_key = this.configService.get<string>("HASHI_ADMIN_KEY")
   }
 
   @Post("payment")
@@ -188,88 +187,88 @@ export class Transaction {
     // return assetId
   }
 
-    /**
-     * Create and submit a group transaction with multiple transaction types
-     * @param body Contains the wallet key name and array of transaction configurations
-     * @returns Transaction ID and any error information
-     */
-    @Post("group-transaction")
-    async createGroupTransaction(@Body() body: {
-        from: string,
-        transactions: Array<{
-            type: 'payment' | 'application' | 'asset-transfer' | 'asset-create' | 'opt-in' | 'opt-out',
-            params: any
-        }>
-    }): Promise<{ txnIds: Array<string>, error: string }> {
-        try {
-            // Validate input
-            if (!body.from) {
-                return { txnIds: [], error: 'Sender address (from) is required' };
-            }
+  /**
+   * Create and submit a group transaction with multiple transaction types
+   * @param body Contains the wallet key name and array of transaction configurations
+   * @returns Transaction ID and any error information
+   */
+  @Post("group-transaction")
+  async createGroupTransaction(@Body() body: {
+    from: string,
+    transactions: Array<{
+      type: 'payment' | 'application' | 'asset-transfer' | 'asset-create' | 'opt-in' | 'opt-out',
+      params: any
+    }>
+  }): Promise<{ txnIds: Array<string>, error: string }> {
+    try {
+      // Validate input
+      if (!body.from) {
+        return { txnIds: [], error: 'Sender address (from) is required' };
+      }
 
-            if (!Array.isArray(body.transactions) || body.transactions.length === 0) {
-                return { txnIds: [], error: 'At least one transaction is required' };
-            }
+      if (!Array.isArray(body.transactions) || body.transactions.length === 0) {
+        return { txnIds: [], error: 'At least one transaction is required' };
+      }
 
-            if (body.transactions.length > 16) {
-                return { txnIds: [], error: 'Maximum 16 transactions allowed in a group' };
-            }
+      if (body.transactions.length > 16) {
+        return { txnIds: [], error: 'Maximum 16 transactions allowed in a group' };
+      }
 
-            // Validate each transaction
-            for (const txn of body.transactions) {
-                if (!txn.type) {
-                    return { txnIds: [], error: 'Transaction type is required for all transactions' };
-                }
-
-                if (!txn.params) {
-                    return { txnIds: [], error: 'Transaction parameters are required for all transactions' };
-                }
-
-                // Type-specific validation
-                switch (txn.type) {
-                    case 'payment':
-                        if (!txn.params.to) {
-                            return { txnIds: [], error: 'Receiver address is required for payment transactions' };
-                        }
-                        if (txn.params.amount === undefined) {
-                            return { txnIds: [], error: 'Amount is required for payment transactions' };
-                        }
-                        break;
-                    case 'application':
-                        if (!txn.params.appIndex && txn.params.appIndex !== 0) {
-                            return { txnIds: [], error: 'Application ID is required for application call transactions' };
-                        }
-                        break;
-                    case 'asset-transfer':
-                    case 'opt-in':
-                    case 'opt-out':
-                        if (!txn.params.assetIndex && txn.params.assetIndex !== 0) {
-                            return { txnIds: [], error: 'Asset ID is required for asset transactions' };
-                        }
-                        break;
-                    case 'asset-create':
-                        if (!txn.params.total) {
-                            return { txnIds: [], error: 'Total supply is required for asset creation' };
-                        }
-                        if (txn.params.decimals === undefined) {
-                            return { txnIds: [], error: 'Decimals is required for asset creation' };
-                        }
-                        break;
-                    default:
-                        return { txnIds: [], error: `Unsupported transaction type: ${txn.type}` };
-                }
-            }
-
-            // Process the group transaction using algosdk
-            return await this.txnService.groupTransactionWithAlgosdk(
-                body.from,
-                body.transactions
-            );
-        } catch (error) {
-            console.error('Error in group transaction API:', error);
-            throw Error(error.message || 'An unexpected error occurred processing the group transaction')
+      // Validate each transaction
+      for (const txn of body.transactions) {
+        if (!txn.type) {
+          return { txnIds: [], error: 'Transaction type is required for all transactions' };
         }
+
+        if (!txn.params) {
+          return { txnIds: [], error: 'Transaction parameters are required for all transactions' };
+        }
+
+        // Type-specific validation
+        switch (txn.type) {
+          case 'payment':
+            if (!txn.params.to) {
+              return { txnIds: [], error: 'Receiver address is required for payment transactions' };
+            }
+            if (txn.params.amount === undefined) {
+              return { txnIds: [], error: 'Amount is required for payment transactions' };
+            }
+            break;
+          case 'application':
+            if (!txn.params.appIndex && txn.params.appIndex !== 0) {
+              return { txnIds: [], error: 'Application ID is required for application call transactions' };
+            }
+            break;
+          case 'asset-transfer':
+          case 'opt-in':
+          case 'opt-out':
+            if (!txn.params.assetIndex && txn.params.assetIndex !== 0) {
+              return { txnIds: [], error: 'Asset ID is required for asset transactions' };
+            }
+            break;
+          case 'asset-create':
+            if (!txn.params.total) {
+              return { txnIds: [], error: 'Total supply is required for asset creation' };
+            }
+            if (txn.params.decimals === undefined) {
+              return { txnIds: [], error: 'Decimals is required for asset creation' };
+            }
+            break;
+          default:
+            return { txnIds: [], error: `Unsupported transaction type: ${txn.type}` };
+        }
+      }
+
+      // Process the group transaction using algosdk
+      return await this.txnService.groupTransactionWithAlgosdk(
+        body.from,
+        body.transactions
+      );
+    } catch (error) {
+      console.error('Error in group transaction API:', error);
+      throw Error(error.message || 'An unexpected error occurred processing the group transaction')
     }
+  }
 
   @ApiBody({
     schema: {
@@ -375,13 +374,13 @@ export class Transaction {
    */
   @Post("example-group-transaction")
   async exampleGroupTransaction() // @Body()
-  // body: {
-  //   from: string;
-  //   receiverAddress: string;
-  //   amount: number;
-  //   assetId: number;
-  // }
-  : Promise<{ txnIds: string[]; error: string }> {
+    // body: {
+    //   from: string;
+    //   receiverAddress: string;
+    //   amount: number;
+    //   assetId: number;
+    // }
+    : Promise<{ txnIds: string[]; error: string }> {
     // Create a group transaction with two transactions:
     // 1. A payment transaction
     // 2. An asset transfer transaction
@@ -471,9 +470,9 @@ export class Transaction {
   // =======================================================================================================
 
   getLocalAlgodClient() {
-    const algodToken = "a".repeat(64);
-    const algodServer = "http://localhost";
-    const algodPort = process.env.ALGOD_PORT || "4001";
+    const algodToken = "";
+    const algodServer = "https://testnet-api.algonode.cloud";
+    const algodPort = process.env.ALGOD_PORT || "443";
 
     const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
     return algodClient;
@@ -561,346 +560,375 @@ export class Transaction {
     return { txnId: "", error: "" };
   }
 
-    //  Criteria application deployment
-    //736766885
-    @ApiBody({
-        description: "Application call transaction",
-        schema: {
-            type: "object",
-            properties: {
-                appIndex: { type: "number" },
-                approvalProgram: { type: "string" },
-                clearProgram: { type: "string" },
-            },
-        },
-    })
-   @Post('application-call')
-   async applicationCall(@Body() body: {
+  //  Criteria application deployment
+  //736766885
+  @ApiBody({
+    description: "Application call transaction",
+    schema: {
+      type: "object",
+      properties: {
+        appIndex: { type: "number" },
+        approvalProgram: { type: "string" },
+        clearProgram: { type: "string" },
+      },
+    },
+  })
+  @Post('application-call')
+  async applicationCall(@Body() body: {
     appIndex?: number,
     approvalProgram?: string,
     clearProgram?: string,
-    }
+  }
   ): Promise<{ application_id: number; assetId: number }> {
     console.log("body inside hashiii--", body.appIndex);
 
-       const assetId = Number(body.appIndex)
+    const assetId = Number(body.appIndex)
 
-        const applicationCallResponse = await this.txnService.applicationCall(
-            this.admin_key,
-            0,
-            body.approvalProgram,
-            body.clearProgram,
-            { numByteSlice: 0, numUint: 2 },
-            { numByteSlice: 0, numUint: 0 },
-            [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(assetId), algosdk.encodeUint64(1) ],
-            [], [], [],
-            1000
-            );
+    const applicationCallResponse = await this.txnService.applicationCall(
+      this.admin_key,
+      0,
+      body.approvalProgram,
+      body.clearProgram,
+      { numByteSlice: 0, numUint: 2 },
+      { numByteSlice: 0, numUint: 0 },
+      [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(assetId), algosdk.encodeUint64(1)],
+      [], [], [],
+      1000
+    );
 
-        const appIndex = Number(applicationCallResponse.applicationId)
-        console.log('applicationCallResponse---', applicationCallResponse.applicationId)
+    const appIndex = Number(applicationCallResponse.applicationId)
+    console.log('applicationCallResponse---', applicationCallResponse.applicationId)
 
-        const address = algosdk.getApplicationAddress(Number(applicationCallResponse.applicationId))
-        const stringAddress = address.toString();
+    const address = algosdk.getApplicationAddress(Number(applicationCallResponse.applicationId))
+    const stringAddress = address.toString();
 
-        const transactionsTransfer = [
-            {
+    const transactionsTransfer = [
+      {
+        type: 'payment' as const,
+        params: {
+          to: stringAddress.toString(),
+          amount: 200000 // 0.2 + 0.001  => optin + transfer + tackling minimum balance
+        }
+      },
+      {
+        type: "application" as const,
+        params: {
+          appIndex: appIndex,
+          appArgs: [
+            new Uint8Array(sha512_256.array(Buffer.from("opt_in_to_asset(pay)void")).slice(0, 4))
+          ],
+          foreignAssets: [assetId],
+          fee: 2000,
+          onComplete: 0,
+        },
+      },
+    ];
+
+
+    const responsetransactionsTransfer = await this.txnService.groupTransactionWithAlgosdk(
+      this.admin_key,
+      transactionsTransfer
+    );
+
+    console.log('responsetransactionsTransfer--', responsetransactionsTransfer)
+
+    const assetKaTransfer = await this.txnService.transferToken(
+      assetId,
+      this.admin_key,
+      stringAddress.toString(),
+      2 ** 53 - 1  // Max qunatity
+    );
+
+    console.log('assetKaTransfer--', assetKaTransfer)
+
+    // if(assetKaTransfer.txnId) {
+    //     return { application_id: appIndex, assetId: assetId }
+    // }
+    return { application_id: appIndex, assetId: assetId }
+  }
+
+  // yojana application deployment
+  @Post('deploy-yojana')
+  async yojanaApplicationCall(@Body() body: {
+    name?: string,
+    counter?: any,
+    token?: any,
+    approvalProgram?: string,
+    clearProgram?: string
+  }): Promise<{ application_id: number }> {
+
+    console.log('body inside hashiii--1', body.name)
+    const name = "ss" + body.name;
+    const counter = body.counter;
+    const token = body.token;
+
+    const uint64Type = new algosdk.ABIUintType(64);
+    const uint64ArrayType = new algosdk.ABIArrayDynamicType(uint64Type);
+
+    const response = await this.txnService.applicationCall(
+      this.admin_key,
+      0,
+      body.approvalProgram,
+      body.clearProgram,
+      { numUint: 2, numByteSlice: 2 },
+      { numByteSlice: 0, numUint: 0 },
+      [new Uint8Array(sha512_256.array(Buffer.from("create_application(string,uint64,uint64[])void")).slice(0, 4)),
+      new TextEncoder().encode(name),
+      algosdk.encodeUint64(0),
+      uint64ArrayType.encode(token)],
+      [],
+      [],
+      [],
+      1000
+    );
+
+    // send 0.001 Algos
+
+    console.log('response---in hashi deploy yojana--', response)
+
+    // Transfer 0.12 algos from admin to application address
+    const address = algosdk.getApplicationAddress(Number(response.applicationId))
+
+    await this.txnService.makePayment(
+      this.admin_key,
+      address.toString(),
+      100000 // 0.1 to make minimum balance match the application address
+    )
+
+    return {
+      application_id: Number(response.applicationId)
+    }
+
+  }
+
+
+  // yojana NFT creation-optIn-transfer
+
+  @Post("create-token/NFT/token")
+  async createYojanaNFTToken(@Body() body: {
+    from: string,
+    receipient_key: string,
+    application_address: string,
+    application_id: number,
+    assetName: string,
+    unitName: string,
+    approvalProgram?: string,
+    clearProgram?: string,
+    reserveAddress?: string,
+    urlTemplate?: string,
+    metadataBytes?: any,
+    metadataHash?: any,
+    tokenIds?: any
+  }): Promise<{ assetId: number }> {
+
+    // const walletBalance = await this.getLocalAlgodClient().accountInformation(
+    //   body.application_address,
+    // ).do();
+    // const contractWalletBalanceAmount = parseInt(walletBalance.amount.toString());
+    // console.log('walletBalance>>>>>> ', contractWalletBalanceAmount, typeof contractWalletBalanceAmount);
+
+    // let balanceToBeTransferred = 103000
+
+    // if (contractWalletBalanceAmount == 0) {
+    //   balanceToBeTransferred = 203000
+    // }
+
+    // await this.transferAlgos({
+    //   amountInAlgos: balanceToBeTransferred,
+    //   fromKey: this.admin_key,
+    //   to: mahilaAddress.address,
+    // })
+
+    const metadataHash = body.metadataHash;
+    const metadataBytes = new TextEncoder().encode(metadataHash);
+    console.log('metadataHash---', metadataHash)
+    const urlTemplate = "ss" + body.urlTemplate;
+    const assetName = "ss" + body.assetName;
+    const unitName = "ss" + body.unitName;
+
+    console.log('inside--', body.urlTemplate, body.assetName, body.unitName)
+    let responseNFTtransactionsOne: any;
+    let responseNFTtransactionsTwo: any;
+    let assetIndex: any;
+    try {
+
+      const transactionsOne = [
+        {
+          type: 'payment' as const,
+          params: {
+            to: body.application_address,
+            amount: 201000
+          }
+        },
+        {
+          type: 'application' as const,
+          params: {
+            appIndex: Number(body.application_id),
+            approvalProgram: undefined,
+            clearProgram: undefined,
+            globalSchema: undefined,
+            localSchema: undefined,
+            appArgs: [new Uint8Array(sha512_256.array(Buffer.from("create_yojana_token(account,string,string,string,byte[],pay)void")).slice(0, 4)),
+            Uint8Array.of(1),
+            Buffer.from(urlTemplate),
+            Buffer.from(assetName),
+            Buffer.from(unitName),
+              metadataBytes
+            ],
+            foreignApps: [],
+            foreignAssets: body.tokenIds,
+            accounts: [body.reserveAddress],
+            fee: 2000,
+          }
+        }
+      ];
+
+      console.log('transactionsOne---', body.receipient_key, transactionsOne[1].params?.appArgs);
+
+      responseNFTtransactionsOne = await this.txnService.groupTransactionWithAlgosdk(
+        body.receipient_key.toString(),
+        transactionsOne
+      );
+
+      console.log('responseNFTtransactionsOne-- \n\n', responseNFTtransactionsOne, '\n\n\n')
+
+      if (responseNFTtransactionsOne.txnIds.length == 2) {
+
+        console.log('responseNFTtransactionsOne--', responseNFTtransactionsOne)
+
+        const token = "";
+        const server = "https://testnet-api.algonode.cloud";
+        const port = "443";
+
+        console.log("insidee--- assetcreation");
+
+        const algodclient = new algosdk.Algodv2(token, server, port);
+
+        const confirmedTxn = await algosdk.waitForConfirmation(algodclient, responseNFTtransactionsOne.txnIds[1], 3);
+        console.log('confirmedTxn---', confirmedTxn)
+
+        assetIndex = confirmedTxn.innerTxns[0].assetIndex
+
+        console.log(`Asset ID created:2 ${assetIndex}`);
+
+        if (Number(assetIndex)) {
+          console.log('inside opt in')
+          const responseOBJ = await this.txnService.optInAsset(Number(assetIndex), body.receipient_key)
+          console.log('inside responseOBJ', responseOBJ)
+          if (responseOBJ.txnId) {
+            console.log('inside transfer')
+            const transactionstwo = [
+              {
                 type: 'payment' as const,
                 params: {
-                    to: stringAddress.toString(),
-                    amount: 200000
+                  to: body.application_address,
+                  amount: 200000
                 }
-            },
-            {
-                type: "application" as const,
+              },
+              {
+                type: 'application' as const,
                 params: {
-                    appIndex: appIndex,
-                    appArgs: [
-                        new Uint8Array(sha512_256.array(Buffer.from("opt_in_to_asset(pay)void")).slice(0, 4))
-                    ],
-                    foreignAssets: [assetId],
-                    fee: 2000,
-                    onComplete: 0,
-                },
-            },
-        ];
-
-
-        const responsetransactionsTransfer = await this.txnService.groupTransactionWithAlgosdk(
-            this.admin_key,
-            transactionsTransfer
-        );
-
-        console.log('responsetransactionsTransfer--', responsetransactionsTransfer)
-
-        const assetKaTransfer = await this.txnService.transferToken(
-            assetId,
-            this.admin_key,
-            stringAddress.toString(),
-            100000
-        );
-
-        console.log('assetKaTransfer--', assetKaTransfer)
-
-        // if(assetKaTransfer.txnId) {
-        //     return { application_id: appIndex, assetId: assetId }
-        // }
-        return { application_id: appIndex, assetId: assetId }
-    }
-
-    // yojana application deployment
-    @Post('deploy-yojana')
-    async yojanaApplicationCall(@Body() body: {
-        name?: string,
-        counter?: any,
-        token?: any,
-        approvalProgram?:string,
-        clearProgram?: string
-    }): Promise<{ application_id: number }> {
-
-        console.log('body inside hashiii--1', body.name)
-        const name = "ss" + body.name;
-        const counter = body.counter;
-        const token = body.token;
-
-        const uint64Type = new algosdk.ABIUintType(64);
-        const uint64ArrayType = new algosdk.ABIArrayDynamicType(uint64Type);
-
-        const response =  await this.txnService.applicationCall(
-            this.admin_key,
-            0,
-            body.approvalProgram,
-            body.clearProgram,
-            { numUint: 2, numByteSlice: 2 },
-            { numByteSlice: 0, numUint: 0 },
-            [new Uint8Array(sha512_256.array(Buffer.from("create_application(string,uint64,uint64[])void")).slice(0, 4)),
-                new TextEncoder().encode(name),
-                algosdk.encodeUint64(0),
-                uint64ArrayType.encode(token)],
-            [],
-            [],
-            [],
-            1000
-        );
-
-        // send 0.001 Algos
-
-        console.log('response---in hashi deploy yojana--', response)
-
-        return {
-            application_id: Number(response.applicationId)
-        }
-
-    }
-
-
-    // yojana NFT creation-optIn-transfer
-
-    @Post("create-token/NFT/token")
-    async createYojanaNFTToken(@Body() body: {
-        from: string,
-        receipient_key: string,
-        application_address: string,
-        application_id:number,
-        assetName: string,
-        unitName: string,
-        approvalProgram?:string,
-        clearProgram?: string,
-        reserveAddress?: string,
-        urlTemplate?: string,
-        metadataBytes?: any,
-        metadataHash?: any,
-        tokenIds?: any
-    }): Promise<{ assetId: number }> {
-
-        const metadataHash = body.metadataHash;
-        const metadataBytes = new TextEncoder().encode(metadataHash);
-        console.log('metadataHash---', metadataHash)
-        const urlTemplate = "ss" + body.urlTemplate;
-        const assetName = "ss" + body.assetName;
-        const unitName = "ss" + body.unitName;
-
-        console.log('inside--', body.urlTemplate, body.assetName, body.unitName)
-        let responseNFTtransactionsOne: any;
-        let responseNFTtransactionsTwo: any;
-        let assetIndex: any;
-        try {
-
-            const transactionsOne = [
-                {
-                    type: 'payment' as const,
-                    params: {
-                        to: body.application_address,
-                        amount: 201000
-                    }
-                },
-                {
-                    type: 'application' as const,
-                    params: {
-                        appIndex: Number(body.application_id),
-                        approvalProgram:undefined,
-                        clearProgram:undefined,
-                        globalSchema:undefined,
-                        localSchema:undefined,
-                        appArgs: [  new Uint8Array( sha512_256.array(Buffer.from("create_yojana_token(account,string,string,string,byte[],pay)void")).slice(0, 4)),
-                        Uint8Array.of(1),
-                        Buffer.from(urlTemplate),
-                        Buffer.from(assetName),
-                        Buffer.from(unitName),
-                        metadataBytes
-                        ],
-                        foreignApps: [],
-                        foreignAssets:body.tokenIds,
-                        accounts: [body.reserveAddress],
-                        fee:1000,
-                    }
+                  appIndex: Number(body.application_id),
+                  approvalProgram: undefined,
+                  clearProgram: undefined,
+                  globalSchema: undefined,
+                  localSchema: undefined,
+                  appArgs: [new Uint8Array(sha512_256.array(Buffer.from("get_yojana_token(pay,uint64)void")).slice(0, 4)),
+                  algosdk.encodeUint64(Number(assetIndex)),
+                  ],
+                  foreignApps: [],
+                  foreignAssets: [Number(assetIndex)],
+                  accounts: [],
+                  fee: 2000,
                 }
+              }
             ];
 
-            console.log('transactionsOne---',body.receipient_key,  transactionsOne[1].params?.appArgs);
 
-             responseNFTtransactionsOne = await this.txnService.groupTransactionWithAlgosdk(
-                body.receipient_key.toString(),
-                transactionsOne
+            responseNFTtransactionsTwo = await this.txnService.groupTransactionWithAlgosdk(
+              body.receipient_key,
+              transactionstwo
             );
-
-             if(responseNFTtransactionsOne.txnIds.length == 2){
-
-                 console.log('responseNFTtransactionsOne--',responseNFTtransactionsOne)
-
-                 const token = "";
-                 const server = "https://testnet-api.algonode.cloud";
-                 const port = "443";
-
-                 console.log("insidee--- assetcreation");
-
-                 const algodclient = new algosdk.Algodv2(token, server, port);
-
-                 const confirmedTxn = await algosdk.waitForConfirmation(algodclient, responseNFTtransactionsOne.txnIds[1], 3);
-                 console.log('confirmedTxn---',confirmedTxn)
-
-                 assetIndex = confirmedTxn.innerTxns[0].assetIndex
-
-                 console.log(`Asset ID created:2 ${assetIndex}`);
-
-                 if(Number(assetIndex)){
-                     console.log('inside opt in')
-                     const responseOBJ =  await this.txnService.optInAsset(Number(assetIndex), body.receipient_key)
-                     console.log('inside responseOBJ',responseOBJ)
-                     if(responseOBJ.txnId) {
-                         console.log('inside transfer')
-                         const transactionstwo = [
-                             {
-                                 type: 'payment' as const,
-                                 params: {
-                                     to: body.application_address,
-                                     amount: 200000
-                                 }
-                             },
-                             {
-                                 type: 'application' as const,
-                                 params: {
-                                     appIndex: Number(body.application_id),
-                                     approvalProgram:undefined,
-                                     clearProgram:undefined,
-                                     globalSchema:undefined,
-                                     localSchema:undefined,
-                                     appArgs: [  new Uint8Array( sha512_256.array(Buffer.from("get_yojana_token(pay,uint64)void")).slice(0, 4)),
-                                         algosdk.encodeUint64(Number(assetIndex)),
-                                     ],
-                                     foreignApps: [],
-                                     foreignAssets:[Number(assetIndex)],
-                                     accounts: [],
-                                     fee:2000,
-                                 }
-                             }
-                         ];
-
-
-                         responseNFTtransactionsTwo = await this.txnService.groupTransactionWithAlgosdk(
-                             body.receipient_key,
-                             transactionstwo
-                         );
-                     }
-                 }
-                 console.log('responseNFTtransactionsTwo--',responseNFTtransactionsTwo)
-             }
-             // else {
-             //     throw new InternalServerErrorException("Creation of NFT failed");
-             // }
-
-
-
-
-            if(responseNFTtransactionsTwo.txnIds.length == 2) {
-                return {assetId: Number(assetIndex)};
-            }
-            // else {
-            //     throw new Error("Transfer of NFT failed")
-            // }
-        } catch (e) {
-            console.log('eeee', e)
-            // if (e instanceof HttpException) {
-            //     throw e;
-            // }
-            //
-            // // Otherwise, wrap it in a generic internal server error
-            // throw new InternalServerErrorException(
-            //     e?.message || "Something went wrong while creating NFT"
-            // );
+          }
         }
+        console.log('responseNFTtransactionsTwo--', responseNFTtransactionsTwo)
+      }
+      // else {
+      //     throw new InternalServerErrorException("Creation of NFT failed");
+      // }
+
+
+
+
+      if (responseNFTtransactionsTwo.txnIds.length == 2) {
+        return { assetId: Number(assetIndex) };
+      }
+      // else {
+      //     throw new Error("Transfer of NFT failed")
+      // }
+    } catch (e) {
+      console.log('eeee', e)
+      // if (e instanceof HttpException) {
+      //     throw e;
+      // }
+      //
+      // // Otherwise, wrap it in a generic internal server error
+      // throw new InternalServerErrorException(
+      //     e?.message || "Something went wrong while creating NFT"
+      // );
     }
+  }
 
 
 
-    // Criteria token claim - optin and claim
+  // Criteria token claim - optin and claim
 
-    @ApiBody({
-        description: "Claim token",
-        schema: {
-            type: "object",
-            properties: {
-                from: { type: "string" },
-                appIndex: { type: "number" },
-                assetId: { type: "number" },
-            },
+  @ApiBody({
+    description: "Claim token",
+    schema: {
+      type: "object",
+      properties: {
+        from: { type: "string" },
+        appIndex: { type: "number" },
+        assetId: { type: "number" },
+      },
+    },
+  })
+  @Post("claim-token")
+  async claimToken(
+    @Body() body: { from: string; appIndex: number; assetId: number }
+  ) {
+    const transactions = [
+      {
+        type: "opt-in" as const,
+        params: {
+          assetIndex: body.assetId, //body.amount
         },
-    })
-    @Post("claim-token")
-    async claimToken(
-        @Body() body: { from: string; appIndex: number; assetId: number }
-    ) {
-        const transactions = [
-            {
-                type: "opt-in" as const,
-                params: {
-                    assetIndex: body.assetId, //body.amount
-                },
-            },
-            {
-                type: "application" as const,
-                params: {
-                    appIndex: body.appIndex,
-                    appArgs: [
-                        new Uint8Array(
-                            sha512_256.array(Buffer.from("claim()void")).slice(0, 4)
-                        ),
-                    ],
-                    foreignAssets: [body.assetId],
-                    fee: 2000,
-                },
-            },
-        ];
+      },
+      {
+        type: "application" as const,
+        params: {
+          appIndex: body.appIndex,
+          appArgs: [
+            new Uint8Array(
+              sha512_256.array(Buffer.from("claim()void")).slice(0, 4)
+            ),
+          ],
+          foreignAssets: [body.assetId],
+          fee: 2000,
+        },
+      },
+    ];
 
-        console.log(
-            "Asset id passed ===== ===== ===== ",
-            JSON.stringify(transactions, null, 2),
-            "\n\n\n\n"
-        );
+    console.log(
+      "Asset id passed ===== ===== ===== ",
+      JSON.stringify(transactions, null, 2),
+      "\n\n\n\n"
+    );
 
-        return await this.txnService.groupTransactionWithAlgosdk(
-            body.from,
-            transactions
-        );
-    }
+    return await this.txnService.groupTransactionWithAlgosdk(
+      body.from,
+      transactions
+    );
+  }
 }
