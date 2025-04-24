@@ -757,7 +757,7 @@ export class Transaction {
           type: 'payment' as const,
           params: {
             to: body.application_address,
-            amount: 201000
+            amount: 101000
           }
         },
         {
@@ -819,13 +819,6 @@ export class Transaction {
             console.log('inside transfer')
             const transactionstwo = [
               {
-                type: 'payment' as const,
-                params: {
-                  to: body.application_address,
-                  amount: 200000
-                }
-              },
-              {
                 type: 'application' as const,
                 params: {
                   appIndex: Number(body.application_id),
@@ -833,7 +826,7 @@ export class Transaction {
                   clearProgram: undefined,
                   globalSchema: undefined,
                   localSchema: undefined,
-                  appArgs: [new Uint8Array(sha512_256.array(Buffer.from("get_yojana_token(pay,uint64)void")).slice(0, 4)),
+                  appArgs: [new Uint8Array(sha512_256.array(Buffer.from("get_yojana_token(uint64)void")).slice(0, 4)),
                   algosdk.encodeUint64(Number(assetIndex)),
                   ],
                   foreignApps: [],
@@ -860,7 +853,7 @@ export class Transaction {
 
 
 
-      if (responseNFTtransactionsTwo.txnIds.length == 2) {
+      if (responseNFTtransactionsTwo.txnIds.length == 1) {
         return { assetId: Number(assetIndex) };
       }
       // else {
