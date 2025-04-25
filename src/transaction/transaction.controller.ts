@@ -27,6 +27,19 @@ import { log } from "console";
 import { Uint64Schema } from "algosdk/dist/types/encoding/schema";
 import { sha256 } from 'js-sha256';
 
+const algodToken = process.env.NODE_TOKEN;
+const algodServer = `https://${process.env.NODE_HOST}`;
+const algodPort = process.env.NODE_PORT;
+
+console.log("Inside transaction controller")
+console.log('algodToken---', algodToken);
+console.log('algodServer---', algodServer);
+console.log('algodPort---', algodPort);
+
+console.log('genisisId---', process.env.GENESIS_ID);
+console.log('genisisHash---', process.env.GENESIS_HASH);
+
+
 // DTO for required parameters
 export class CreateAssetRequiredDto {
   @IsString()
@@ -470,9 +483,9 @@ export class Transaction {
   // =======================================================================================================
 
   getLocalAlgodClient() {
-    const algodToken = "";
-    const algodServer = "https://testnet-api.algonode.cloud";
-    const algodPort = process.env.ALGOD_PORT || "443";
+    const algodToken = process.env.NODE_TOKEN;
+    const algodServer = `https://${process.env.NODE_HOST}`;
+    const algodPort = process.env.NODE_PORT;
 
     const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
     return algodClient;
@@ -514,8 +527,8 @@ export class Transaction {
     console.log(txnGroup);
 
     const txnCrafter = new AlgorandTransactionCrafter(
-      "testnet-v1.0",
-      "SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI="
+      process.env.GENESIS_ID,
+      process.env.GENESIS_HASH,
     );
 
     // assignGroupID returns the same txns with the group ID set
@@ -796,9 +809,9 @@ export class Transaction {
 
         console.log('responseNFTtransactionsOne--', responseNFTtransactionsOne)
 
-        const token = "";
-        const server = "https://testnet-api.algonode.cloud";
-        const port = "443";
+        const token = process.env.NODE_TOKEN;
+        const server = `https://${process.env.NODE_HOST}`;
+        const port = process.env.NODE_PORT;
 
         console.log("insidee--- assetcreation");
 
