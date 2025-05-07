@@ -604,7 +604,7 @@ export class Transaction {
       body.clearProgram,
       { numByteSlice: 0, numUint: 2 },
       { numByteSlice: 0, numUint: 0 },
-      [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64,uint64)void")).slice(0, 4)), algosdk.encodeUint64(assetId), algosdk.encodeUint64(1)],
+      [new Uint8Array(sha512_256.array(Buffer.from("create_application(uint64)void")).slice(0, 4)), algosdk.encodeUint64(assetId)],
       [], [], [],
       1000
     );
