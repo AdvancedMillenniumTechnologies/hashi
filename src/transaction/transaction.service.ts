@@ -624,13 +624,16 @@ export class TransactionService implements OnModuleInit {
 
         switch (txConfig.type) {
           case 'payment':
+            var sp = suggestedParams;
+            sp.fee = BigInt(1000)
+            sp.flatFee = true
             console.log('fromAddr-service--', fromAddr, txConfig.params.to, txConfig.params.amount, suggestedParams)
             // Payment transaction using algosdk
             txObject = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
               sender: fromAddr,
               receiver: txConfig.params.to,
               amount: txConfig.params.amount,
-              suggestedParams: suggestedParams
+              suggestedParams: sp
             });
             break;
           case 'application':
@@ -681,13 +684,16 @@ export class TransactionService implements OnModuleInit {
             });
             break;
           case 'opt-in':
+            var sp = suggestedParams;
+            sp.fee = BigInt(1000)
+            sp.flatFee = true
             // Asset opt-in transaction using algosdk
             txObject = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
               sender: fromAddr,
               receiver: fromAddr,
               assetIndex: txConfig.params.assetIndex,
               amount: 0,
-              suggestedParams: suggestedParams
+              suggestedParams: sp
             });
             break;
           case 'opt-out':
