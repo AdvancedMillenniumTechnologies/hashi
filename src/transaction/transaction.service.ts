@@ -483,6 +483,7 @@ export class TransactionService implements OnModuleInit {
     console.log("ready--", ready);
     const txtId = await this.walletService.submitTransaction(ready);
     console.log("txtId--", txtId);
+    await new Promise(resolve => setTimeout(resolve, 4000));
     return txtId;
   }
 
