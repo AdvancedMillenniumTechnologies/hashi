@@ -607,7 +607,7 @@ export class TransactionService implements OnModuleInit {
   async groupTransactionWithAlgosdk(
     from: string,
     transactions: Array<{
-      type: 'payment' | 'application' | 'asset-transfer' | 'asset-create' | 'opt-in' | 'opt-out',
+      type: 'payment' | 'application' | 'asset-transfer' | 'asset-create' | 'opt-in' | 'opt-out' | 'clawback',
       params: any
     }>
   ): Promise<{ txnIds: Array<string>, error: string }> {
@@ -706,6 +706,28 @@ export class TransactionService implements OnModuleInit {
               amount: 0,
               closeRemainderTo: txConfig.params.closeTo,
               suggestedParams: suggestedParams
+            });
+            break;
+          case 'clawback':
+            var sp = suggestedParams;
+            sp.fee = BigInt(txConfig.params.fee)
+            sp.flatFee = true
+            console.log({
+              sender: fromAddr,
+              receiver: fromAddr,
+              assetIndex: txConfig.params.assetIndex,
+              amount: txConfig.params.amount,
+              assetSender: txConfig.params.from,
+              suggestedParams: sp
+            })
+            // Asset opt-out transaction using algosdk
+            txObject = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+              sender: fromAddr,
+              receiver: fromAddr,
+              assetIndex: txConfig.params.assetIndex,
+              amount: txConfig.params.amount,
+              assetSender: txConfig.params.from,
+              suggestedParams: sp
             });
             break;
           default:

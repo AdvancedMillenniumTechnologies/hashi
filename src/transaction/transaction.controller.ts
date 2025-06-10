@@ -937,4 +937,44 @@ export class Transaction {
       transactions
     );
   }
+
+  @ApiBody({
+    description: "Asset clawback",
+    schema: {
+      type: "object",
+      properties: {
+        from: { type: "string" },
+        to: { type: "string" },
+        appIndex: { type: "number" },
+        assetId: { type: "number" },
+      },
+    },
+  })
+  @Post("asset-clawback")
+  async assetClawback(
+    @Body() body: { assetId: number; from: string; to: string; amount: number }
+  ) {
+    const assetId = Number(body.assetId);
+    const amount = Number(body.amount);
+
+    const claimTxn = [
+      {
+        type: "clawback" as const,
+        params: {
+          assetIndex: assetId,
+          from: body.from,
+          to: body.to,
+          amount: amount,
+          fee: 1000
+        },
+      },
+    ]
+
+    await this.txnService.groupTransactionWithAlgosdk(
+      body.to,
+      claimTxn
+    );
+
+  }
+
 }
