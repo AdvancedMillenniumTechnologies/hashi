@@ -65,28 +65,33 @@ export class VaultService {
     // fetch root token
     // const token: string = JSON.parse(fs.readFileSync("vault-seal-keys.json").toString()).root_token
     // const sampleKey: string = crypto.randomUUID()
-    const res = await this.httpService.axiosRef.post(
-      `${this.configService.get("VAULT_URL") || "http://localhost:8200"}/v1/transit/keys/${keyName}`,
-      {
-        type: keyType,
-        derived: false,
-        allow_deletion: true,
-      },
-      {
-        headers: {
-          "X-Vault-Token": this.latestToken,
+    try {
+      const res = await this.httpService.axiosRef.post(
+        `${this.configService.get("VAULT_URL") || "http://localhost:8200"}/v1/transit/keys/${keyName}`,
+        {
+          type: keyType,
+          derived: false,
+          allow_deletion: true,
         },
-      }
-    );
+        {
+          headers: {
+            "X-Vault-Token": this.latestToken,
+          },
+        }
+      );
 
-    const publicKey: Buffer = Buffer.from(
-      res.data.data.keys["1"].public_key,
-      "base64"
-    );
+      const publicKey: Buffer = Buffer.from(
+        res.data.data.keys["1"].public_key,
+        "base64"
+      );
 
-    // log key created
-    Logger.debug(publicKey.toString("base64"), `VaultService.keyGen`);
-    return publicKey;
+      // log key created
+      Logger.debug(publicKey.toString("base64"), `VaultService.keyGen`);
+      return publicKey;
+    } catch (error) {
+      Logger.error(`failed to create key ${keyName} nad the error is ${error}`)
+      throw error
+    }
   }
 
   /**
